@@ -45,3 +45,6 @@ retention.
 - Checked-in geocoding API keys
 - Silent location or address storage
 - Broad rewrites without documenting missing source
+
+This list is a roadmap guardrail, not a permanent rule.
+Strong user demand and strong technical rationale can change it.
