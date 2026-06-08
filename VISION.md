@@ -39,7 +39,7 @@ Geocoding apps may process user-entered addresses or location data. Future
 implementation should keep data handling explicit and avoid silent uploads or
 retention.
 
-## What We Will Not Merge For Now
+## What We Will Not Merge (For Now)
 
 - Claims about working geocoding before source is restored
 - Checked-in geocoding API keys
