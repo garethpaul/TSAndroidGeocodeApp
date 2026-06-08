@@ -10,4 +10,5 @@
     <string name="use_location">Use Latitude/Longitude</string>
     <string name="get_address">Get Address</string>
     <string name="fetch">Fetch</string>
+    <string name="invalid_latitude_longitude">Please enter valid latitude and longitude values</string>
 </resources>

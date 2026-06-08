@@ -18,7 +18,7 @@ This README is based on the checked-in source, manifests, scripts, and repositor
 Additional scan context:
 
 - Source directories: app
-- Dependency and build manifests: none detected
+- Dependency and build manifests: app/build.gradle
 - Entry points or build surfaces: Gradle build files
 - Test-looking files: app/src/androidTest/java/com/sample/foo/tsgeocodeapp/ApplicationTest.java
 
@@ -41,11 +41,13 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 
 ## Running or Using the Project
 
-- Use Android Studio to open the project or run `gradle assembleDebug` when the Android SDK is configured.
+- Use Android Studio to open the `app` module with an Android SDK that supports the legacy Gradle and support-library versions.
+- Run `make verify` for repository static checks. The `build` step runs Gradle only when a wrapper or root `settings.gradle` is available.
 
 ## Testing and Verification
 
-- `gradle test` or Android Studio's test runner when the SDK is configured
+- `make verify`
+- Android Studio's test runner when the matching legacy SDK is configured
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
 

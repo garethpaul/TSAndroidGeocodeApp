@@ -5,10 +5,10 @@ configuration, a manifest, internet permission, and declared activity/service
 entry points.
 
 The repository is useful as a partial archive of an Android geocode app
-structure, but the primary source files are not present in the current tree.
+structure with checked-in activity and service source files.
 
-The goal is to preserve what exists and document the missing implementation
-before adding new behavior.
+The goal is to preserve what exists, keep the legacy behavior understandable,
+and make small defensive improvements without broad rewrites.
 
 The current focus is:
 
@@ -16,13 +16,14 @@ Priority:
 
 - Preserve the Gradle and manifest structure
 - Keep internet permission and service declarations visible
-- Avoid inventing geocoding behavior that is not checked in
+- Keep geocoding behavior claims aligned with checked-in code
 - Treat Android SDK and support library versions as legacy
+- Guard user-entered coordinates before invoking geocoder services
 
 Next priorities:
 
 - Add README notes describing the intended geocoding flow
-- Restore or document the missing activity and service source files
+- Add focused checks for UI and service contracts
 - Add setup notes for Android SDK versions
 - Decide whether to archive or rebuild the sample
 
@@ -45,7 +46,7 @@ retention.
 
 ## What We Will Not Merge (For Now)
 
-- Claims about working geocoding before source is restored
+- Claims about production-ready geocoding without current device verification
 - Checked-in geocoding API keys
 - Silent location or address storage
 - Broad rewrites without documenting missing source

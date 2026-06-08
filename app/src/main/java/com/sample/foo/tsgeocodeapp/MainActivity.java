@@ -89,10 +89,21 @@ public class MainActivity extends AppCompatActivity {
                         Toast.LENGTH_LONG).show();
                 return;
             }
+            double latitude;
+            double longitude;
+            try {
+                latitude = Double.parseDouble(latitudeEdit.getText().toString());
+                longitude = Double.parseDouble(longitudeEdit.getText().toString());
+            } catch (NumberFormatException numberFormatException) {
+                Toast.makeText(this,
+                        R.string.invalid_latitude_longitude,
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
             intent.putExtra(Constants.LOCATION_LATITUDE_DATA_EXTRA,
-                    Double.parseDouble(latitudeEdit.getText().toString()));
+                    latitude);
             intent.putExtra(Constants.LOCATION_LONGITUDE_DATA_EXTRA,
-                    Double.parseDouble(longitudeEdit.getText().toString()));
+                    longitude);
         }
         infoText.setVisibility(View.INVISIBLE);
         progressBar.setVisibility(View.VISIBLE);
