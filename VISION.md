@@ -18,6 +18,7 @@ Priority:
 - Keep internet permission and service declarations visible
 - Keep geocoding behavior claims aligned with checked-in code
 - Treat Android SDK and support library versions as legacy
+- Keep Gradle application id aligned with the manifest package
 - Guard user-entered coordinates before invoking geocoder services
 
 Next priorities:

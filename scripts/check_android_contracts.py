@@ -70,6 +70,16 @@ def check_manifest_contracts():
     )
 
 
+def check_gradle_application_id():
+    build_gradle = read_text("app/build.gradle")
+    match = re.search(r'applicationId\s+"([^"]+)"', build_gradle)
+    require(match is not None, "app/build.gradle must declare an applicationId")
+    require(
+        match.group(1) == "com.sample.foo.tsgeocodeapp",
+        "Gradle applicationId must match the manifest and Java package",
+    )
+
+
 def check_coordinate_input_guard():
     main_activity = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/MainActivity.java")
     strings = read_text("app/src/main/res/values/strings.xml")
@@ -112,6 +122,7 @@ def main():
     checks = [
         check_xml_resources,
         check_manifest_contracts,
+        check_gradle_application_id,
         check_coordinate_input_guard,
     ]
     try:
