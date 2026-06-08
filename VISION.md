@@ -39,7 +39,6 @@ Canonical security policy and reporting:
 
 - [`SECURITY.md`](SECURITY.md)
 
-
 Geocoding apps may process user-entered addresses or location data. Future
 implementation should keep data handling explicit and avoid silent uploads or
 retention.
