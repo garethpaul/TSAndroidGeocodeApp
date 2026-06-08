@@ -12,6 +12,11 @@ This README is based on the checked-in source, manifests, scripts, and repositor
 ## Repository Contents
 
 - `app` - source or example code
+- `CHANGES.md` - maintenance history for Android contract checks
+- `Makefile` - local verification entry points
+- `docs/plans` - completed maintenance plans for the current baseline
+- `plans` - historical implementation notes
+- `scripts` - static Android contract validators
 - `SECURITY.md` - security reporting and disclosure guidance
 - `VISION.md` - project direction and maintenance guardrails
 
@@ -48,6 +53,7 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 
 - `make check` runs XML parsing checks, manifest/service/activity contract
   checks, Gradle application-id checks, and coordinate input guard checks.
+- Static checks also require completed canonical plans under `docs/plans`.
 - Android Studio's test runner when the matching legacy SDK is configured
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
@@ -67,6 +73,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
 - This looks like a legacy Android project or sample. Expect Android SDK, Gradle, and support-library versions to matter.
 - See `SECURITY.md` for vulnerability reporting and safe research guidance.
 - See `VISION.md` for project direction and contribution guardrails.
+- See `docs/plans/2026-06-08-tsandroidgeocodeapp-baseline.md` for the
+  canonical Android geocode contract baseline.
 
 ## Contributing
 
