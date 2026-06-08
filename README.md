@@ -42,11 +42,11 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 ## Running or Using the Project
 
 - Use Android Studio to open the `app` module with an Android SDK that supports the legacy Gradle and support-library versions.
-- Run `make verify` for repository static checks. The `build` step runs Gradle only when a wrapper or root `settings.gradle` is available.
+- Run `make check` for repository static checks. The `build` step runs Gradle only when a wrapper or root `settings.gradle` is available.
 
 ## Testing and Verification
 
-- `make verify` runs XML parsing checks, manifest/service/activity contract
+- `make check` runs XML parsing checks, manifest/service/activity contract
   checks, Gradle application-id checks, and coordinate input guard checks.
 - Android Studio's test runner when the matching legacy SDK is configured
 

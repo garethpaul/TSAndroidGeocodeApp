@@ -2,6 +2,7 @@
 
 ## 2026-06-08
 
+- Added `make check` as the shared repository verification alias.
 - Aligned the Gradle `applicationId` with the manifest and Java package.
 - Extended static Android contract checks to catch future application-id drift.
 - Added a `make verify` quality gate backed by static Android source and XML contract checks.
