@@ -21,7 +21,7 @@ Priority:
 - Keep Gradle application id aligned with the manifest package
 - Guard user-entered coordinates before invoking geocoder services
 - Reject out-of-range coordinates before invoking geocoder services
-- Trim address-name requests before invoking geocoder services
+- Trim and validate address-name requests before invoking geocoder services
 - Keep background geocode tasks consuming validated request values
 - Keep completed maintenance plans under `docs/plans`
 

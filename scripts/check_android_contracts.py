@@ -102,6 +102,7 @@ def check_gradle_application_id():
 def check_coordinate_input_guard():
     main_activity = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/MainActivity.java")
     async_activity = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/MainActivityWithAsyncTask.java")
+    service = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/GeocodeAddressIntentService.java")
     strings = read_text("app/src/main/res/values/strings.xml")
 
     match = re.search(
@@ -207,6 +208,18 @@ def check_coordinate_input_guard():
     require(
         "Double.parseDouble(longitudeEdit.getText().toString())" not in async_activity.split("protected Address doInBackground", 1)[-1],
         "GeocodeAsyncTask must not parse longitude from UI text in doInBackground",
+    )
+    require(
+        'name = name == null ? "" : name.trim();' in service,
+        "IntentService must normalize address-name extras before geocoding",
+    )
+    require(
+        "if(TextUtils.isEmpty(name))" in service,
+        "IntentService must reject blank address-name extras before geocoding",
+    )
+    require(
+        'errorMessage = "Invalid Address Name";' in service,
+        "IntentService must report invalid address-name extras without geocoding",
     )
 
 

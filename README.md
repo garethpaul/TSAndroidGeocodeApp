@@ -53,9 +53,10 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 
 - `make check` runs XML parsing checks, manifest/service/activity contract
   checks, Gradle application-id checks, and coordinate input guard checks for
-  both geocoding activity variants. It also requires primary activity
-  address-name input to be trimmed before service geocode work starts and
-  latitude/longitude values to be range-checked before geocoder work starts.
+  both geocoding activity variants. It also requires primary activity and
+  IntentService address-name input to be trimmed before service geocode work
+  starts, and latitude/longitude values to be range-checked before geocoder
+  work starts.
 - Static checks also require completed canonical plans under `docs/plans`.
 - Android Studio's test runner when the matching legacy SDK is configured
 
@@ -84,6 +85,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   address-name validation coverage.
 - See `docs/plans/2026-06-09-coordinate-range-guard.md` for coordinate range
   validation coverage.
+- See `docs/plans/2026-06-09-service-address-name-guard.md` for IntentService
+  address-name extra validation coverage.
 
 ## Contributing
 

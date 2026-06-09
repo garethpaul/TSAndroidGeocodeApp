@@ -2,6 +2,9 @@
 
 ## 2026-06-09
 
+- Added service-side address-name extra normalization before geocoder work.
+- Extended static Android contract checks to require the IntentService to
+  reject blank address-name extras.
 - Added latitude/longitude range validation before service or AsyncTask geocoder
   work starts.
 - Extended static Android contract checks to require coordinate range guards.

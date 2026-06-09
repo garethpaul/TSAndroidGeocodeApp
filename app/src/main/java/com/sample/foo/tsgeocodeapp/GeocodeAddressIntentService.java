@@ -35,11 +35,17 @@ public class GeocodeAddressIntentService extends IntentService {
 
         if(fetchType == Constants.USE_ADDRESS_NAME) {
             String name = intent.getStringExtra(Constants.LOCATION_NAME_DATA_EXTRA);
-            try {
-                addresses = geocoder.getFromLocationName(name, 1);
-            } catch (IOException e) {
-                errorMessage = "Service not available";
-                Log.e(TAG, errorMessage, e);
+            name = name == null ? "" : name.trim();
+            if(TextUtils.isEmpty(name)) {
+                errorMessage = "Invalid Address Name";
+                Log.e(TAG, errorMessage);
+            } else {
+                try {
+                    addresses = geocoder.getFromLocationName(name, 1);
+                } catch (IOException e) {
+                    errorMessage = "Service not available";
+                    Log.e(TAG, errorMessage, e);
+                }
             }
         }
         else if(fetchType == Constants.USE_ADDRESS_LOCATION) {
