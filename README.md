@@ -61,7 +61,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   Primary activity result handling must also guard missing result bundles,
   addresses, and result text before rendering geocode output. Service and
   legacy AsyncTask result formatting must include the final Android address
-  line returned by `getMaxAddressLineIndex()`.
+  line returned by `getMaxAddressLineIndex()`. The checked-in manifest must
+  also keep Android app-data backup disabled by default.
 - Static checks also require completed canonical plans under `docs/plans`.
 - Android Studio's test runner when the matching legacy SDK is configured
 
@@ -75,6 +76,7 @@ When the required SDK or runtime is unavailable, use static checks and source re
 
 - Review changes touching network requests, sockets, or service endpoints; examples from the scan include app/src/androidTest/java/com/sample/foo/tsgeocodeapp/ApplicationTest.java, app/src/main/AndroidManifest.xml, app/src/main/res/layout/activity_main.xml.
 - Review changes touching mobile permissions or privacy-sensitive device data; examples from the scan include app/src/main/AndroidManifest.xml, app/src/main/java/com/sample/foo/tsgeocodeapp/GeocodeAddressIntentService.java, app/src/main/java/com/sample/foo/tsgeocodeapp/MainActivity.java, app/src/main/java/com/sample/foo/tsgeocodeapp/MainActivityWithAsyncTask.java, and 1 more.
+- Android app-data backup is disabled by default for the geocoding sample.
 - Review changes touching file, media, JSON, XML, CSV, OCR, or data parsing; examples from the scan include app/src/main/res/layout/activity_main.xml, app/src/main/res/values-w820dp/dimens.xml.
 
 ## Maintenance Notes
@@ -100,6 +102,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   activity result payload validation coverage.
 - See `docs/plans/2026-06-09-address-line-index-guard.md` for inclusive
   geocoder address-line result coverage.
+- See `docs/plans/2026-06-09-android-backup-opt-out.md` for the Android
+  app-data backup opt-out.
 
 ## Contributing
 

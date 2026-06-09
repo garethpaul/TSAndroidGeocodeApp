@@ -12,6 +12,7 @@ ANDROID_NS = "http://schemas.android.com/apk/res/android"
 DOCS_PLANS = ROOT / "docs" / "plans"
 CANONICAL_PLAN = DOCS_PLANS / "2026-06-08-tsandroidgeocodeapp-baseline.md"
 RESULT_RECEIVER_PAYLOAD_PLAN = DOCS_PLANS / "2026-06-09-result-receiver-payload-guard.md"
+ANDROID_BACKUP_PLAN = DOCS_PLANS / "2026-06-09-android-backup-opt-out.md"
 
 
 def fail(message):
@@ -44,6 +45,10 @@ def check_docs_plans():
         RESULT_RECEIVER_PAYLOAD_PLAN.exists(),
         "docs/plans/2026-06-09-result-receiver-payload-guard.md is missing",
     )
+    require(
+        ANDROID_BACKUP_PLAN.exists(),
+        "docs/plans/2026-06-09-android-backup-opt-out.md is missing",
+    )
 
     plans = sorted(DOCS_PLANS.glob("*.md")) if DOCS_PLANS.exists() else []
     require(plans, "docs/plans must contain at least one completed plan")
@@ -74,6 +79,10 @@ def check_manifest_contracts():
 
     application = manifest.find("application")
     require(application is not None, "manifest must declare an application")
+    require(
+        application.attrib.get(f"{{{ANDROID_NS}}}allowBackup") == "false",
+        "manifest application must explicitly disable app-data backup",
+    )
 
     service_names = {
         service.attrib.get(f"{{{ANDROID_NS}}}name")

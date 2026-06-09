@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Disabled app-data backup in the checked-in manifest and added static Android
+  contract coverage for the opt-out.
 - Fixed service and legacy AsyncTask address-line loops so the final geocoder
   line is included in rendered results.
 - Extended static Android contract checks to require inclusive address-line
