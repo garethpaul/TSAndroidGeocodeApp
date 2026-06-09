@@ -214,6 +214,15 @@ def check_coordinate_input_guard():
         "IntentService must normalize address-name extras before geocoding",
     )
     require(
+        "if (resultReceiver == null)" in service,
+        "IntentService must reject requests without a ResultReceiver",
+    )
+    require(
+        service.index("if (resultReceiver == null)")
+        < service.index("Geocoder geocoder = new Geocoder"),
+        "IntentService must validate ResultReceiver before creating the geocoder",
+    )
+    require(
         "if(TextUtils.isEmpty(name))" in service,
         "IntentService must reject blank address-name extras before geocoding",
     )

@@ -26,9 +26,16 @@ public class GeocodeAddressIntentService extends IntentService {
     @Override
     protected void onHandleIntent(Intent intent) {
         Log.e(TAG, "onHandleIntent");
-        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
         String errorMessage = "";
         List<Address> addresses = null;
+
+        resultReceiver = intent.getParcelableExtra(Constants.RECEIVER);
+        if (resultReceiver == null) {
+            Log.e(TAG, "Missing ResultReceiver");
+            return;
+        }
+
+        Geocoder geocoder = new Geocoder(this, Locale.getDefault());
 
         int fetchType = intent.getIntExtra(Constants.FETCH_TYPE_EXTRA, 0);
         Log.e(TAG, "fetchType == " + fetchType);
@@ -76,7 +83,6 @@ public class GeocodeAddressIntentService extends IntentService {
             Log.e(TAG, errorMessage);
         }
 
-        resultReceiver = intent.getParcelableExtra(Constants.RECEIVER);
         if (addresses == null || addresses.size()  == 0) {
             if (errorMessage.isEmpty()) {
                 errorMessage = "Not Found";

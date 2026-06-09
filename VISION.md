@@ -24,6 +24,7 @@ Priority:
   direct IntentService requests
 - Trim and validate address-name requests before invoking geocoder services
 - Keep background geocode tasks consuming validated request values
+- Reject IntentService geocode requests that cannot receive a result
 - Keep completed maintenance plans under `docs/plans`
 
 Next priorities:

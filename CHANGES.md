@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Added an IntentService `ResultReceiver` guard before geocoder work starts and
+  extended static Android contract checks to require it.
 - Added IntentService coordinate range validation before direct geocoder calls.
 - Extended static Android contract checks to require service-side range guards.
 - Added service-side address-name extra normalization before geocoder work.
