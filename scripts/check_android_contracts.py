@@ -101,6 +101,7 @@ def check_gradle_application_id():
 
 def check_coordinate_input_guard():
     main_activity = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/MainActivity.java")
+    async_activity = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/MainActivityWithAsyncTask.java")
     strings = read_text("app/src/main/res/values/strings.xml")
 
     match = re.search(
@@ -134,6 +135,35 @@ def check_coordinate_input_guard():
     require(
         '<string name="invalid_latitude_longitude">' in strings,
         "strings.xml must define invalid_latitude_longitude",
+    )
+
+    require(
+        "import android.widget.Toast;" in async_activity,
+        "async activity must import Toast for validation feedback",
+    )
+    require(
+        "catch (NumberFormatException" in async_activity,
+        "async activity must guard invalid numeric coordinates before starting AsyncTask",
+    )
+    require(
+        "R.string.invalid_latitude_longitude" in async_activity,
+        "async activity invalid coordinate feedback must use the shared string resource",
+    )
+    require(
+        "new GeocodeAsyncTask(fetchType" in async_activity,
+        "async activity must pass validated request values into GeocodeAsyncTask",
+    )
+    require(
+        "GeocodeAsyncTask(int taskFetchType, String addressName, double latitude, double longitude)" in async_activity,
+        "GeocodeAsyncTask must capture validated request values",
+    )
+    require(
+        "Double.parseDouble(latitudeEdit.getText().toString())" not in async_activity.split("protected Address doInBackground", 1)[-1],
+        "GeocodeAsyncTask must not parse latitude from UI text in doInBackground",
+    )
+    require(
+        "Double.parseDouble(longitudeEdit.getText().toString())" not in async_activity.split("protected Address doInBackground", 1)[-1],
+        "GeocodeAsyncTask must not parse longitude from UI text in doInBackground",
     )
 
 

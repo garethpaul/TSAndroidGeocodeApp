@@ -12,6 +12,7 @@ import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import java.io.IOException;
 import java.util.List;
@@ -70,12 +71,50 @@ public class MainActivityWithAsyncTask extends AppCompatActivity {
     }
 
     public void onButtonClicked(View view) {
-        new GeocodeAsyncTask().execute();
+        if(fetchType == USE_ADDRESS_NAME) {
+            String addressName = addressEdit.getText().toString().trim();
+            if(addressName.length() == 0) {
+                Toast.makeText(this, "Please enter an address name", Toast.LENGTH_LONG).show();
+                return;
+            }
+            new GeocodeAsyncTask(fetchType, addressName, 0, 0).execute();
+        }
+        else {
+            if(latitudeEdit.getText().length() == 0 || longitudeEdit.getText().length() == 0) {
+                Toast.makeText(this,
+                        "Please enter both latitude and longitude",
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
+            double latitude;
+            double longitude;
+            try {
+                latitude = Double.parseDouble(latitudeEdit.getText().toString());
+                longitude = Double.parseDouble(longitudeEdit.getText().toString());
+            } catch (NumberFormatException numberFormatException) {
+                Toast.makeText(this,
+                        R.string.invalid_latitude_longitude,
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
+            new GeocodeAsyncTask(fetchType, null, latitude, longitude).execute();
+        }
     }
 
     class GeocodeAsyncTask extends AsyncTask<Void, Void, Address> {
 
+        final int taskFetchType;
+        final String addressName;
+        final double latitude;
+        final double longitude;
         String errorMessage = "";
+
+        GeocodeAsyncTask(int taskFetchType, String addressName, double latitude, double longitude) {
+            this.taskFetchType = taskFetchType;
+            this.addressName = addressName;
+            this.latitude = latitude;
+            this.longitude = longitude;
+        }
 
         @Override
         protected void onPreExecute() {
@@ -88,19 +127,15 @@ public class MainActivityWithAsyncTask extends AppCompatActivity {
             Geocoder geocoder = new Geocoder(MainActivityWithAsyncTask.this, Locale.getDefault());
             List<Address> addresses = null;
 
-            if(fetchType == USE_ADDRESS_NAME) {
-                String name = addressEdit.getText().toString();
+            if(taskFetchType == USE_ADDRESS_NAME) {
                 try {
-                    addresses = geocoder.getFromLocationName(name, 1);
+                    addresses = geocoder.getFromLocationName(addressName, 1);
                 } catch (IOException e) {
                     errorMessage = "Service not available";
                     Log.e(TAG, errorMessage, e);
                 }
             }
-            else if(fetchType == USE_ADDRESS_LOCATION) {
-                double latitude = Double.parseDouble(latitudeEdit.getText().toString());
-                double longitude = Double.parseDouble(longitudeEdit.getText().toString());
-
+            else if(taskFetchType == USE_ADDRESS_LOCATION) {
                 try {
                     addresses = geocoder.getFromLocation(latitude, longitude, 1);
                 } catch (IOException ioException) {

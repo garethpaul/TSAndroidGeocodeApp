@@ -2,6 +2,8 @@
 
 ## 2026-06-08
 
+- Guarded the legacy AsyncTask geocode path so invalid coordinates show
+  feedback before background geocoder work starts.
 - Added `make check` as the shared repository verification alias.
 - Aligned the Gradle `applicationId` with the manifest and Java package.
 - Extended static Android contract checks to catch future application-id drift.
