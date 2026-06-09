@@ -2,6 +2,8 @@
 
 ## 2026-06-09
 
+- Removed stale checkbox references from both activities and added static
+  contract coverage against undeclared layout widget ids.
 - Disabled app-data backup in the checked-in manifest and added static Android
   contract coverage for the opt-out.
 - Fixed service and legacy AsyncTask address-line loops so the final geocoder

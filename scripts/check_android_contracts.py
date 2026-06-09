@@ -13,6 +13,7 @@ DOCS_PLANS = ROOT / "docs" / "plans"
 CANONICAL_PLAN = DOCS_PLANS / "2026-06-08-tsandroidgeocodeapp-baseline.md"
 RESULT_RECEIVER_PAYLOAD_PLAN = DOCS_PLANS / "2026-06-09-result-receiver-payload-guard.md"
 ANDROID_BACKUP_PLAN = DOCS_PLANS / "2026-06-09-android-backup-opt-out.md"
+STALE_CHECKBOX_PLAN = DOCS_PLANS / "2026-06-09-stale-checkbox-reference.md"
 
 
 def fail(message):
@@ -48,6 +49,10 @@ def check_docs_plans():
     require(
         ANDROID_BACKUP_PLAN.exists(),
         "docs/plans/2026-06-09-android-backup-opt-out.md is missing",
+    )
+    require(
+        STALE_CHECKBOX_PLAN.exists(),
+        "docs/plans/2026-06-09-stale-checkbox-reference.md is missing",
     )
 
     plans = sorted(DOCS_PLANS.glob("*.md")) if DOCS_PLANS.exists() else []
@@ -118,6 +123,19 @@ def check_coordinate_input_guard():
     async_activity = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/MainActivityWithAsyncTask.java")
     service = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/GeocodeAddressIntentService.java")
     strings = read_text("app/src/main/res/values/strings.xml")
+
+    for source_name, source in (
+        ("MainActivity", main_activity),
+        ("MainActivityWithAsyncTask", async_activity),
+    ):
+        require(
+            "import android.widget.CheckBox;" not in source,
+            f"{source_name} must not import the removed checkbox widget",
+        )
+        require(
+            "R.id.checkbox" not in source,
+            f"{source_name} must not reference a layout checkbox that is not declared",
+        )
 
     match = re.search(
         r"public void onButtonClicked\(View view\) \{(?P<body>.*?)\n    \}",

@@ -62,7 +62,9 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   addresses, and result text before rendering geocode output. Service and
   legacy AsyncTask result formatting must include the final Android address
   line returned by `getMaxAddressLineIndex()`. The checked-in manifest must
-  also keep Android app-data backup disabled by default.
+  also keep Android app-data backup disabled by default. Activity source must
+  not reference layout widget ids that are not declared by the checked-in
+  layout.
 - Static checks also require completed canonical plans under `docs/plans`.
 - Android Studio's test runner when the matching legacy SDK is configured
 
@@ -104,6 +106,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   geocoder address-line result coverage.
 - See `docs/plans/2026-06-09-android-backup-opt-out.md` for the Android
   app-data backup opt-out.
+- See `docs/plans/2026-06-09-stale-checkbox-reference.md` for stale layout
+  widget reference cleanup.
 
 ## Contributing
 

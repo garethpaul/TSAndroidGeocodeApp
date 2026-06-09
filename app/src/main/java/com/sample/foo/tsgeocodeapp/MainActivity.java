@@ -9,7 +9,6 @@ import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.RadioButton;
@@ -23,9 +22,7 @@ public class MainActivity extends AppCompatActivity {
     EditText latitudeEdit, longitudeEdit, addressEdit;
     ProgressBar progressBar;
     TextView infoText;
-    CheckBox checkBox;
 
-    boolean fetchAddress;
     int fetchType = Constants.USE_ADDRESS_LOCATION;
 
     private static final String TAG = "MAIN_ACTIVITY";
@@ -41,7 +38,6 @@ public class MainActivity extends AppCompatActivity {
         addressEdit = (EditText) findViewById(R.id.addressEdit);
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
         infoText = (TextView) findViewById(R.id.infoText);
-        checkBox = (CheckBox) findViewById(R.id.checkbox);
 
         mResultReceiver = new AddressResultReceiver(null);
     }
@@ -52,7 +48,6 @@ public class MainActivity extends AppCompatActivity {
         switch(view.getId()) {
             case R.id.radioAddress:
                 if (checked) {
-                    fetchAddress = false;
                     fetchType = Constants.USE_ADDRESS_NAME;
                     longitudeEdit.setEnabled(false);
                     latitudeEdit.setEnabled(false);
@@ -62,7 +57,6 @@ public class MainActivity extends AppCompatActivity {
                 break;
             case R.id.radioLocation:
                 if (checked) {
-                    fetchAddress = true;
                     fetchType = Constants.USE_ADDRESS_LOCATION;
                     latitudeEdit.setEnabled(true);
                     latitudeEdit.requestFocus();

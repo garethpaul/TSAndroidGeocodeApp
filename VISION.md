@@ -28,6 +28,7 @@ Priority:
 - Guard geocode result payloads before updating the primary activity UI
 - Include the final Android address line when rendering geocode results
 - Keep Android app-data backup disabled by default
+- Keep activity source aligned with declared layout widget ids
 - Keep completed maintenance plans under `docs/plans`
 
 Next priorities:
@@ -61,6 +62,7 @@ retention.
 - Checked-in geocoding API keys
 - Silent location or address storage
 - Out-of-range geocoder requests that rely on background exceptions
+- Source references to undeclared layout widgets
 - Broad rewrites without documenting missing source
 
 This list is a roadmap guardrail, not a permanent rule.

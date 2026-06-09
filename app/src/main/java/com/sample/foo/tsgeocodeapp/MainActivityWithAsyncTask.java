@@ -7,7 +7,6 @@ import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.View;
-import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.ProgressBar;
 import android.widget.RadioButton;
@@ -23,7 +22,6 @@ public class MainActivityWithAsyncTask extends AppCompatActivity {
     EditText latitudeEdit, longitudeEdit, addressEdit;
     ProgressBar progressBar;
     TextView infoText;
-    CheckBox checkBox;
 
     public static final int USE_ADDRESS_NAME = 1;
     public static final int USE_ADDRESS_LOCATION = 2;
@@ -42,7 +40,6 @@ public class MainActivityWithAsyncTask extends AppCompatActivity {
         addressEdit = (EditText) findViewById(R.id.addressEdit);
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
         infoText = (TextView) findViewById(R.id.infoText);
-        checkBox = (CheckBox) findViewById(R.id.checkbox);
     }
 
     public void onRadioButtonClicked(View view) {
