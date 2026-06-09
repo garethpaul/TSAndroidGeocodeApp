@@ -117,6 +117,22 @@ def check_coordinate_input_guard():
         "invalid coordinate feedback must use the shared string resource",
     )
     require(
+        "String addressName = addressEdit.getText().toString().trim();" in body,
+        "MainActivity must trim address-name input before validation",
+    )
+    require(
+        "if(addressName.length() == 0)" in body,
+        "MainActivity must reject blank address-name input after trimming",
+    )
+    require(
+        "intent.putExtra(Constants.LOCATION_NAME_DATA_EXTRA, addressName)" in body,
+        "MainActivity must pass the trimmed address name to the IntentService",
+    )
+    require(
+        "intent.putExtra(Constants.LOCATION_NAME_DATA_EXTRA, addressEdit.getText().toString())" not in body,
+        "MainActivity must not pass raw address-name input to the IntentService",
+    )
+    require(
         "catch (NumberFormatException" in body,
         "invalid numeric coordinates must not crash MainActivity",
     )

@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-09
+
+- Trimmed primary activity address-name input before validation so
+  whitespace-only geocode requests do not start service work.
+
 ## 2026-06-08
 
 - Guarded the legacy AsyncTask geocode path so invalid coordinates show

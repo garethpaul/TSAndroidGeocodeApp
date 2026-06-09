@@ -76,11 +76,12 @@ public class MainActivity extends AppCompatActivity {
         intent.putExtra(Constants.RECEIVER, mResultReceiver);
         intent.putExtra(Constants.FETCH_TYPE_EXTRA, fetchType);
         if(fetchType == Constants.USE_ADDRESS_NAME) {
-            if(addressEdit.getText().length() == 0) {
+            String addressName = addressEdit.getText().toString().trim();
+            if(addressName.length() == 0) {
                 Toast.makeText(this, "Please enter an address name", Toast.LENGTH_LONG).show();
                 return;
             }
-            intent.putExtra(Constants.LOCATION_NAME_DATA_EXTRA, addressEdit.getText().toString());
+            intent.putExtra(Constants.LOCATION_NAME_DATA_EXTRA, addressName);
         }
         else {
             if(latitudeEdit.getText().length() == 0 || longitudeEdit.getText().length() == 0) {
