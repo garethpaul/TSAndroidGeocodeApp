@@ -2,6 +2,9 @@
 
 ## 2026-06-09
 
+- Added latitude/longitude range validation before service or AsyncTask geocoder
+  work starts.
+- Extended static Android contract checks to require coordinate range guards.
 - Trimmed primary activity address-name input before validation so
   whitespace-only geocode requests do not start service work.
 

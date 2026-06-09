@@ -97,8 +97,19 @@ public class MainActivityWithAsyncTask extends AppCompatActivity {
                         Toast.LENGTH_LONG).show();
                 return;
             }
+            if(!isCoordinateInRange(latitude, longitude)) {
+                Toast.makeText(this,
+                        R.string.invalid_latitude_longitude,
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
             new GeocodeAsyncTask(fetchType, null, latitude, longitude).execute();
         }
+    }
+
+    private boolean isCoordinateInRange(double latitude, double longitude) {
+        return latitude >= -90 && latitude <= 90 &&
+                longitude >= -180 && longitude <= 180;
     }
 
     class GeocodeAsyncTask extends AsyncTask<Void, Void, Address> {

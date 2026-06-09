@@ -137,6 +137,15 @@ def check_coordinate_input_guard():
         "invalid numeric coordinates must not crash MainActivity",
     )
     require(
+        "if(!isCoordinateInRange(latitude, longitude))" in body,
+        "out-of-range coordinates must be rejected before starting the service",
+    )
+    require(
+        "latitude >= -90 && latitude <= 90" in main_activity
+        and "longitude >= -180 && longitude <= 180" in main_activity,
+        "MainActivity must define latitude/longitude range limits",
+    )
+    require(
         re.search(r"catch \(NumberFormatException [^)]+\) \{\s*Toast\.makeText", body, re.DOTALL),
         "invalid coordinate parse failures must show user feedback",
     )
@@ -147,6 +156,10 @@ def check_coordinate_input_guard():
     require(
         body.index("catch (NumberFormatException") < body.index("startService(intent)"),
         "coordinate parse guard must run before starting the service",
+    )
+    require(
+        body.index("if(!isCoordinateInRange(latitude, longitude))") < body.index("startService(intent)"),
+        "coordinate range guard must run before starting the service",
     )
     require(
         '<string name="invalid_latitude_longitude">' in strings,
@@ -166,8 +179,22 @@ def check_coordinate_input_guard():
         "async activity invalid coordinate feedback must use the shared string resource",
     )
     require(
+        "if(!isCoordinateInRange(latitude, longitude))" in async_activity,
+        "async activity must reject out-of-range coordinates before starting AsyncTask",
+    )
+    require(
+        "latitude >= -90 && latitude <= 90" in async_activity
+        and "longitude >= -180 && longitude <= 180" in async_activity,
+        "async activity must define latitude/longitude range limits",
+    )
+    require(
         "new GeocodeAsyncTask(fetchType" in async_activity,
         "async activity must pass validated request values into GeocodeAsyncTask",
+    )
+    require(
+        async_activity.index("if(!isCoordinateInRange(latitude, longitude))")
+        < async_activity.index("new GeocodeAsyncTask(fetchType, null, latitude, longitude)"),
+        "async coordinate range guard must run before starting AsyncTask",
     )
     require(
         "GeocodeAsyncTask(int taskFetchType, String addressName, double latitude, double longitude)" in async_activity,

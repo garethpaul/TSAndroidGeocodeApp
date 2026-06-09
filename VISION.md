@@ -20,6 +20,7 @@ Priority:
 - Treat Android SDK and support library versions as legacy
 - Keep Gradle application id aligned with the manifest package
 - Guard user-entered coordinates before invoking geocoder services
+- Reject out-of-range coordinates before invoking geocoder services
 - Trim address-name requests before invoking geocoder services
 - Keep background geocode tasks consuming validated request values
 - Keep completed maintenance plans under `docs/plans`
@@ -54,6 +55,7 @@ retention.
 - Claims about production-ready geocoding without current device verification
 - Checked-in geocoding API keys
 - Silent location or address storage
+- Out-of-range geocoder requests that rely on background exceptions
 - Broad rewrites without documenting missing source
 
 This list is a roadmap guardrail, not a permanent rule.

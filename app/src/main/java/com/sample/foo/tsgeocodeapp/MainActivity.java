@@ -101,6 +101,12 @@ public class MainActivity extends AppCompatActivity {
                         Toast.LENGTH_LONG).show();
                 return;
             }
+            if(!isCoordinateInRange(latitude, longitude)) {
+                Toast.makeText(this,
+                        R.string.invalid_latitude_longitude,
+                        Toast.LENGTH_LONG).show();
+                return;
+            }
             intent.putExtra(Constants.LOCATION_LATITUDE_DATA_EXTRA,
                     latitude);
             intent.putExtra(Constants.LOCATION_LONGITUDE_DATA_EXTRA,
@@ -110,6 +116,11 @@ public class MainActivity extends AppCompatActivity {
         progressBar.setVisibility(View.VISIBLE);
         Log.e(TAG, "Starting Service");
         startService(intent);
+    }
+
+    private boolean isCoordinateInRange(double latitude, double longitude) {
+        return latitude >= -90 && latitude <= 90 &&
+                longitude >= -180 && longitude <= 180;
     }
 
     class AddressResultReceiver extends ResultReceiver {
