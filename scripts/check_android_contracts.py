@@ -221,6 +221,20 @@ def check_coordinate_input_guard():
         'errorMessage = "Invalid Address Name";' in service,
         "IntentService must report invalid address-name extras without geocoding",
     )
+    require(
+        "if(!isCoordinateInRange(latitude, longitude))" in service,
+        "IntentService must reject out-of-range coordinates before geocoding",
+    )
+    require(
+        "latitude >= -90 && latitude <= 90" in service
+        and "longitude >= -180 && longitude <= 180" in service,
+        "IntentService must define latitude/longitude range limits",
+    )
+    require(
+        service.index("if(!isCoordinateInRange(latitude, longitude))")
+        < service.index("addresses = geocoder.getFromLocation(latitude, longitude, 1)"),
+        "IntentService coordinate range guard must run before geocoder lookup",
+    )
 
 
 def main():

@@ -52,16 +52,23 @@ public class GeocodeAddressIntentService extends IntentService {
             double latitude = intent.getDoubleExtra(Constants.LOCATION_LATITUDE_DATA_EXTRA, 0);
             double longitude = intent.getDoubleExtra(Constants.LOCATION_LONGITUDE_DATA_EXTRA, 0);
 
-            try {
-                addresses = geocoder.getFromLocation(latitude, longitude, 1);
-            } catch (IOException ioException) {
-                errorMessage = "Service Not Available";
-                Log.e(TAG, errorMessage, ioException);
-            } catch (IllegalArgumentException illegalArgumentException) {
+            if(!isCoordinateInRange(latitude, longitude)) {
                 errorMessage = "Invalid Latitude or Longitude Used";
                 Log.e(TAG, errorMessage + ". " +
                         "Latitude = " + latitude + ", Longitude = " +
-                        longitude, illegalArgumentException);
+                        longitude);
+            } else {
+                try {
+                    addresses = geocoder.getFromLocation(latitude, longitude, 1);
+                } catch (IOException ioException) {
+                    errorMessage = "Service Not Available";
+                    Log.e(TAG, errorMessage, ioException);
+                } catch (IllegalArgumentException illegalArgumentException) {
+                    errorMessage = "Invalid Latitude or Longitude Used";
+                    Log.e(TAG, errorMessage + ". " +
+                            "Latitude = " + latitude + ", Longitude = " +
+                            longitude, illegalArgumentException);
+                }
             }
         }
         else {
@@ -95,6 +102,11 @@ public class GeocodeAddressIntentService extends IntentService {
                     TextUtils.join(System.getProperty("line.separator"),
                             addressFragments), address);
         }
+    }
+
+    private boolean isCoordinateInRange(double latitude, double longitude) {
+        return latitude >= -90 && latitude <= 90 &&
+                longitude >= -180 && longitude <= 180;
     }
 
     private void deliverResultToReceiver(int resultCode, String message, Address address) {
