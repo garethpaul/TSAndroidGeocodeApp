@@ -178,7 +178,7 @@ public class MainActivityWithAsyncTask extends AppCompatActivity {
             }
             else {
                 String addressName = "";
-                for(int i = 0; i < address.getMaxAddressLineIndex(); i++) {
+                for(int i = 0; i <= address.getMaxAddressLineIndex(); i++) {
                     addressName += " --- " + address.getAddressLine(i);
                 }
                 progressBar.setVisibility(View.INVISIBLE);

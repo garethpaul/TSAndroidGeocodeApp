@@ -229,6 +229,10 @@ def check_coordinate_input_guard():
         "GeocodeAsyncTask must not parse longitude from UI text in doInBackground",
     )
     require(
+        "i <= address.getMaxAddressLineIndex()" in async_activity,
+        "async activity must include the final address line when rendering results",
+    )
+    require(
         'name = name == null ? "" : name.trim();' in service,
         "IntentService must normalize address-name extras before geocoding",
     )
@@ -262,6 +266,10 @@ def check_coordinate_input_guard():
         service.index("if(!isCoordinateInRange(latitude, longitude))")
         < service.index("addresses = geocoder.getFromLocation(latitude, longitude, 1)"),
         "IntentService coordinate range guard must run before geocoder lookup",
+    )
+    require(
+        service.count("i <= address.getMaxAddressLineIndex()") >= 2,
+        "IntentService must include the final address line in all result loops",
     )
 
 

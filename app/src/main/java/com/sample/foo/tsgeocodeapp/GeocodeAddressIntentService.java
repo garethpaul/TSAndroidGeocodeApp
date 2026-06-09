@@ -92,7 +92,7 @@ public class GeocodeAddressIntentService extends IntentService {
         } else {
             for(Address address : addresses) {
                 String outputAddress = "";
-                for(int i = 0; i < address.getMaxAddressLineIndex(); i++) {
+                for(int i = 0; i <= address.getMaxAddressLineIndex(); i++) {
                     outputAddress += " --- " + address.getAddressLine(i);
                 }
                 Log.e(TAG, outputAddress);
@@ -100,7 +100,7 @@ public class GeocodeAddressIntentService extends IntentService {
             Address address = addresses.get(0);
             ArrayList<String> addressFragments = new ArrayList<>();
 
-            for(int i = 0; i < address.getMaxAddressLineIndex(); i++) {
+            for(int i = 0; i <= address.getMaxAddressLineIndex(); i++) {
                 addressFragments.add(address.getAddressLine(i));
             }
             Log.i(TAG, "Address Found");

@@ -2,6 +2,10 @@
 
 ## 2026-06-09
 
+- Fixed service and legacy AsyncTask address-line loops so the final geocoder
+  line is included in rendered results.
+- Extended static Android contract checks to require inclusive address-line
+  result iteration.
 - Guarded primary activity geocode result rendering against missing bundles,
   addresses, and result text.
 - Extended static Android contract checks to require result payload guards.

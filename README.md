@@ -59,7 +59,9 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   service geocoder work starts. The IntentService must also reject direct
   requests that do not include a `ResultReceiver` before creating a geocoder.
   Primary activity result handling must also guard missing result bundles,
-  addresses, and result text before rendering geocode output.
+  addresses, and result text before rendering geocode output. Service and
+  legacy AsyncTask result formatting must include the final Android address
+  line returned by `getMaxAddressLineIndex()`.
 - Static checks also require completed canonical plans under `docs/plans`.
 - Android Studio's test runner when the matching legacy SDK is configured
 
@@ -96,6 +98,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   IntentService receiver validation coverage.
 - See `docs/plans/2026-06-09-result-receiver-payload-guard.md` for primary
   activity result payload validation coverage.
+- See `docs/plans/2026-06-09-address-line-index-guard.md` for inclusive
+  geocoder address-line result coverage.
 
 ## Contributing
 

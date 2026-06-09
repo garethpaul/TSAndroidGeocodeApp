@@ -26,6 +26,7 @@ Priority:
 - Keep background geocode tasks consuming validated request values
 - Reject IntentService geocode requests that cannot receive a result
 - Guard geocode result payloads before updating the primary activity UI
+- Include the final Android address line when rendering geocode results
 - Keep completed maintenance plans under `docs/plans`
 
 Next priorities:
