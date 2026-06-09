@@ -58,6 +58,8 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   starts, and latitude/longitude values to be range-checked before activity or
   service geocoder work starts. The IntentService must also reject direct
   requests that do not include a `ResultReceiver` before creating a geocoder.
+  Primary activity result handling must also guard missing result bundles,
+  addresses, and result text before rendering geocode output.
 - Static checks also require completed canonical plans under `docs/plans`.
 - Android Studio's test runner when the matching legacy SDK is configured
 
@@ -92,6 +94,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   IntentService coordinate range validation coverage.
 - See `docs/plans/2026-06-09-service-result-receiver-guard.md` for
   IntentService receiver validation coverage.
+- See `docs/plans/2026-06-09-result-receiver-payload-guard.md` for primary
+  activity result payload validation coverage.
 
 ## Contributing
 

@@ -2,6 +2,9 @@
 
 ## 2026-06-09
 
+- Guarded primary activity geocode result rendering against missing bundles,
+  addresses, and result text.
+- Extended static Android contract checks to require result payload guards.
 - Added an IntentService `ResultReceiver` guard before geocoder work starts and
   extended static Android contract checks to require it.
 - Added IntentService coordinate range validation before direct geocoder calls.

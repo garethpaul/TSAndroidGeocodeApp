@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.ResultReceiver;
 import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.CheckBox;
@@ -28,6 +29,7 @@ public class MainActivity extends AppCompatActivity {
     int fetchType = Constants.USE_ADDRESS_LOCATION;
 
     private static final String TAG = "MAIN_ACTIVITY";
+    private static final String NO_GEOCODE_RESULT = "No geocode result";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -130,30 +132,39 @@ public class MainActivity extends AppCompatActivity {
 
         @Override
         protected void onReceiveResult(int resultCode, final Bundle resultData) {
+            if (resultData == null) {
+                showResultText(NO_GEOCODE_RESULT);
+                return;
+            }
+
+            final String resultMessage = resultData.getString(Constants.RESULT_DATA_KEY);
             if (resultCode == Constants.SUCCESS_RESULT) {
                 final Address address = resultData.getParcelable(Constants.RESULT_ADDRESS);
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        progressBar.setVisibility(View.GONE);
-                        infoText.setVisibility(View.VISIBLE);
-                        infoText.setText("Latitude: " + address.getLatitude() + "\n" +
-                                "Longitude: " + address.getLongitude() + "\n" +
-                                "Address: " + resultData.getString(Constants.RESULT_DATA_KEY));
-                    }
-                });
+                if (address == null || TextUtils.isEmpty(resultMessage)) {
+                    showResultText(NO_GEOCODE_RESULT);
+                    return;
+                }
+
+                showResultText("Latitude: " + address.getLatitude() + "\n" +
+                        "Longitude: " + address.getLongitude() + "\n" +
+                        "Address: " + resultMessage);
             }
             else {
-                runOnUiThread(new Runnable() {
-                    @Override
-                    public void run() {
-                        progressBar.setVisibility(View.GONE);
-                        infoText.setVisibility(View.VISIBLE);
-                        infoText.setText(resultData.getString(Constants.RESULT_DATA_KEY));
-                    }
-                });
+                showResultText(TextUtils.isEmpty(resultMessage) ?
+                        NO_GEOCODE_RESULT : resultMessage);
             }
         }
+    }
+
+    private void showResultText(final String message) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                progressBar.setVisibility(View.GONE);
+                infoText.setVisibility(View.VISIBLE);
+                infoText.setText(message);
+            }
+        });
     }
 
 }

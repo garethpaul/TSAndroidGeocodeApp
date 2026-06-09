@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 ANDROID_NS = "http://schemas.android.com/apk/res/android"
 DOCS_PLANS = ROOT / "docs" / "plans"
 CANONICAL_PLAN = DOCS_PLANS / "2026-06-08-tsandroidgeocodeapp-baseline.md"
+RESULT_RECEIVER_PAYLOAD_PLAN = DOCS_PLANS / "2026-06-09-result-receiver-payload-guard.md"
 
 
 def fail(message):
@@ -38,6 +39,10 @@ def check_docs_plans():
     require(
         CANONICAL_PLAN.exists(),
         "docs/plans/2026-06-08-tsandroidgeocodeapp-baseline.md is missing",
+    )
+    require(
+        RESULT_RECEIVER_PAYLOAD_PLAN.exists(),
+        "docs/plans/2026-06-09-result-receiver-payload-guard.md is missing",
     )
 
     plans = sorted(DOCS_PLANS.glob("*.md")) if DOCS_PLANS.exists() else []
@@ -165,6 +170,20 @@ def check_coordinate_input_guard():
     require(
         '<string name="invalid_latitude_longitude">' in strings,
         "strings.xml must define invalid_latitude_longitude",
+    )
+    for fragment in (
+        "import android.text.TextUtils;",
+        'private static final String NO_GEOCODE_RESULT = "No geocode result";',
+        "if (resultData == null)",
+        "final String resultMessage = resultData.getString(Constants.RESULT_DATA_KEY);",
+        "address == null || TextUtils.isEmpty(resultMessage)",
+        "showResultText(NO_GEOCODE_RESULT)",
+        "private void showResultText(final String message)",
+    ):
+        require(fragment in main_activity, f"MainActivity result receiver guard is missing: {fragment}")
+    require(
+        "infoText.setText(resultData.getString(Constants.RESULT_DATA_KEY))" not in main_activity,
+        "MainActivity must not render raw ResultReceiver bundle strings directly",
     )
 
     require(
