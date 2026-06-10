@@ -141,7 +141,7 @@ def check_hosted_verification():
         "actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654",
         "java-version: \"17\"",
         "run: make static",
-        'sdkmanager "platforms;android-35" "build-tools;35.0.0"',
+        '$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0"',
         "run: make check",
     ]
     for contract in required_contracts:
