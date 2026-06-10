@@ -15,6 +15,7 @@ RESULT_RECEIVER_PAYLOAD_PLAN = DOCS_PLANS / "2026-06-09-result-receiver-payload-
 ANDROID_BACKUP_PLAN = DOCS_PLANS / "2026-06-09-android-backup-opt-out.md"
 STALE_CHECKBOX_PLAN = DOCS_PLANS / "2026-06-09-stale-checkbox-reference.md"
 HOSTED_VERIFICATION_PLAN = DOCS_PLANS / "2026-06-10-hosted-static-verification.md"
+LIFECYCLE_RECEIVER_PLAN = DOCS_PLANS / "2026-06-10-result-receiver-lifecycle.md"
 
 
 def fail(message):
@@ -58,6 +59,10 @@ def check_docs_plans():
     require(
         HOSTED_VERIFICATION_PLAN.exists(),
         "docs/plans/2026-06-10-hosted-static-verification.md is missing",
+    )
+    require(
+        LIFECYCLE_RECEIVER_PLAN.exists(),
+        "docs/plans/2026-06-10-result-receiver-lifecycle.md is missing",
     )
 
     plans = sorted(DOCS_PLANS.glob("*.md")) if DOCS_PLANS.exists() else []
@@ -133,13 +138,15 @@ def check_hosted_verification():
         "workflow_dispatch:",
         "branches:\n      - master",
         "permissions:\n  contents: read",
+        "group: check-${{ github.workflow }}-${{ github.ref }}",
         "cancel-in-progress: true",
+        "runs-on: ubuntu-24.04",
         "timeout-minutes: 5",
         "timeout-minutes: 15",
         'python-version: ["3.10", "3.12"]',
-        "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10",
-        "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405",
-        "actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654",
+        "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3",
+        "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0",
+        "actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.1.0",
         "java-version: \"17\"",
         "run: make static",
         '$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;35.0.0"',
@@ -147,6 +154,21 @@ def check_hosted_verification():
     ]
     for contract in required_contracts:
         require(contract in workflow, f"hosted verification must include {contract!r}")
+    require(
+        workflow.count("runs-on: ubuntu-24.04") == 2,
+        "both hosted verification jobs must use Ubuntu 24.04",
+    )
+    require(
+        "ubuntu-latest" not in workflow,
+        "hosted verification must not use a floating Ubuntu runner",
+    )
+    require(
+        workflow.count(
+            "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3"
+        )
+        == 2,
+        "both hosted verification jobs must use the annotated checkout pin",
+    )
     require("@v" not in workflow, "hosted verification actions must use immutable SHAs")
 
 
@@ -244,6 +266,28 @@ def check_coordinate_input_guard():
         "infoText.setText(resultData.getString(Constants.RESULT_DATA_KEY))" not in main_activity,
         "MainActivity must not render raw ResultReceiver bundle strings directly",
     )
+    for fragment in (
+        "import java.lang.ref.WeakReference;",
+        "import android.os.Looper;",
+        "mResultReceiver = new AddressResultReceiver(this);",
+        "private static final class AddressResultReceiver extends ResultReceiver",
+        "private final WeakReference<MainActivity> activityReference;",
+        "super(new Handler(Looper.getMainLooper()));",
+        "activityReference = new WeakReference<>(activity);",
+        "MainActivity activity = activityReference.get();",
+        "activity == null || activity.isFinishing() || activity.isDestroyed()",
+        "activity.handleGeocodeResult(resultCode, resultData);",
+        "private void handleGeocodeResult(int resultCode, Bundle resultData)",
+    ):
+        require(fragment in main_activity, f"MainActivity lifecycle-safe receiver is missing: {fragment}")
+    require(
+        "mResultReceiver = new AddressResultReceiver(null);" not in main_activity,
+        "MainActivity must bind the receiver through a weak activity reference",
+    )
+    require(
+        "runOnUiThread" not in main_activity,
+        "ResultReceiver must dispatch directly through its main-looper Handler",
+    )
 
     require(
         "name = GeocodeInputValidator.normalizeAddress(name);" in service,
@@ -306,6 +350,7 @@ def check_modern_android_build():
     root_build = read_text("build.gradle")
     app_build = read_text("app/build.gradle")
     wrapper = read_text("gradle/wrapper/gradle-wrapper.properties")
+    makefile = read_text("Makefile")
     require('version "8.10.1"' in root_build, "Android Gradle Plugin must remain pinned")
     require("compileSdk = 36" in app_build, "compileSdk must remain on API 36")
     require("targetSdk = 36" in app_build, "targetSdk must remain on API 36")
@@ -320,6 +365,13 @@ def check_modern_android_build():
         in wrapper,
         "Gradle wrapper distribution checksum must remain pinned",
     )
+    for fragment in (
+        "ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))",
+        "GRADLEW ?= $(ROOT)/gradlew",
+        '$(PYTHON) "$(ROOT)/scripts/check_android_contracts.py"',
+        'cd "$(ROOT)" && "$(GRADLEW)"',
+    ):
+        require(fragment in makefile, f"Makefile must support invocation outside the repository: {fragment}")
 
 
 def main():

@@ -2,6 +2,13 @@
 
 ## 2026-06-10
 
+- Replaced the Activity-retaining result receiver with a static receiver that
+  uses a weak Activity reference, main-looper delivery, and lifecycle guards.
+- Made every Make target independent of the caller's working directory.
+- Fixed GitHub Actions jobs to Ubuntu 24.04, documented immutable action
+  versions, and scoped concurrency to the workflow and ref.
+- Extended static contracts with lifecycle, runner, action-version, and
+  root-independent command mutation coverage.
 - Restored a reproducible Android build with Gradle 8.14.5, Android Gradle
   Plugin 8.10.1, Android SDK 36, JDK 17, and AndroidX AppCompat 1.7.1.
 - Raised the supported device floor from API 15 to API 21, matching current
