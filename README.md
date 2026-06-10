@@ -15,6 +15,7 @@ This README is based on the checked-in source, manifests, scripts, and repositor
 - `CHANGES.md` - maintenance history for Android contract checks
 - `Makefile` - local verification entry points
 - `docs/plans` - completed maintenance plans for the current baseline
+- `.github/workflows/check.yml` - hosted static verification for pushes and pull requests
 - `plans` - historical implementation notes
 - `scripts` - static Android contract validators
 - `SECURITY.md` - security reporting and disclosure guidance
@@ -48,6 +49,7 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
 
 - Use Android Studio to open the `app` module with an Android SDK that supports the legacy Gradle and support-library versions.
 - Run `make check` for repository static checks. The `build` step runs Gradle only when a wrapper or root `settings.gradle` is available.
+- GitHub Actions runs the same static gate on Python 3.10 and 3.12 with read-only repository permissions. It does not claim to assemble an APK.
 
 ## Testing and Verification
 
@@ -66,6 +68,9 @@ The setup commands above are derived from repository files. Legacy mobile, Pytho
   not reference layout widget ids that are not declared by the checked-in
   layout.
 - Static checks also require completed canonical plans under `docs/plans`.
+- Static checks enforce the hosted workflow trigger, least-privilege
+  permissions, immutable action pins, bounded runtime, Python matrix, and
+  `make check` command.
 - Android Studio's test runner when the matching legacy SDK is configured
 
 When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
@@ -108,6 +113,8 @@ When the required SDK or runtime is unavailable, use static checks and source re
   app-data backup opt-out.
 - See `docs/plans/2026-06-09-stale-checkbox-reference.md` for stale layout
   widget reference cleanup.
+- See `docs/plans/2026-06-10-hosted-static-verification.md` for the hosted
+  static verification boundary and workflow contracts.
 
 ## Contributing
 

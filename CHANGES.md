@@ -1,5 +1,14 @@
 # Changes
 
+## 2026-06-10
+
+- Added least-privilege GitHub Actions verification on Python 3.10 and 3.12
+  with immutable action pins and a bounded runtime.
+- Extended static contracts to enforce workflow triggers, permissions, action
+  provenance, matrix coverage, timeout, and the shared `make check` command.
+- Documented that hosted verification covers static contracts while Android
+  APK assembly still requires a compatible legacy toolchain.
+
 ## 2026-06-09
 
 - Removed stale checkbox references from both activities and added static

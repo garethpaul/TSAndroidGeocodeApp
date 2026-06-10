@@ -14,6 +14,7 @@ CANONICAL_PLAN = DOCS_PLANS / "2026-06-08-tsandroidgeocodeapp-baseline.md"
 RESULT_RECEIVER_PAYLOAD_PLAN = DOCS_PLANS / "2026-06-09-result-receiver-payload-guard.md"
 ANDROID_BACKUP_PLAN = DOCS_PLANS / "2026-06-09-android-backup-opt-out.md"
 STALE_CHECKBOX_PLAN = DOCS_PLANS / "2026-06-09-stale-checkbox-reference.md"
+HOSTED_VERIFICATION_PLAN = DOCS_PLANS / "2026-06-10-hosted-static-verification.md"
 
 
 def fail(message):
@@ -53,6 +54,10 @@ def check_docs_plans():
     require(
         STALE_CHECKBOX_PLAN.exists(),
         "docs/plans/2026-06-09-stale-checkbox-reference.md is missing",
+    )
+    require(
+        HOSTED_VERIFICATION_PLAN.exists(),
+        "docs/plans/2026-06-10-hosted-static-verification.md is missing",
     )
 
     plans = sorted(DOCS_PLANS.glob("*.md")) if DOCS_PLANS.exists() else []
@@ -116,6 +121,23 @@ def check_gradle_application_id():
         match.group(1) == "com.sample.foo.tsgeocodeapp",
         "Gradle applicationId must match the manifest and Java package",
     )
+
+
+def check_hosted_verification():
+    workflow = read_text(".github/workflows/check.yml")
+    required_contracts = [
+        "pull_request:",
+        "branches:\n      - master",
+        "permissions:\n  contents: read",
+        "timeout-minutes: 5",
+        'python-version: ["3.10", "3.12"]',
+        "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10",
+        "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405",
+        "run: make check",
+    ]
+    for contract in required_contracts:
+        require(contract in workflow, f"hosted verification must include {contract!r}")
+    require("@v" not in workflow, "hosted verification actions must use immutable SHAs")
 
 
 def check_coordinate_input_guard():
@@ -306,6 +328,7 @@ def main():
         check_xml_resources,
         check_manifest_contracts,
         check_gradle_application_id,
+        check_hosted_verification,
         check_coordinate_input_guard,
     ]
     try:
