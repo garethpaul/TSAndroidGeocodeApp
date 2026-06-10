@@ -130,6 +130,7 @@ def check_hosted_verification():
     workflow = read_text(".github/workflows/check.yml")
     required_contracts = [
         "pull_request:",
+        "workflow_dispatch:",
         "branches:\n      - master",
         "permissions:\n  contents: read",
         "cancel-in-progress: true",

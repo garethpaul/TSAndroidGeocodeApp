@@ -55,9 +55,10 @@ network conditions.
 - `make check` runs the complete unit-test, APK, lint, and contract gate.
 
 GitHub Actions runs the static contracts on Python 3.10 and 3.12 and runs the
-full Android gate on JDK 17. Workflow permissions are read-only and action
-revisions are pinned to immutable commits. The Gradle distribution is verified
-by checksum, and Dependabot groups weekly Gradle and Actions updates.
+full Android gate on JDK 17 for pushes, pull requests, and manual runs. Workflow
+permissions are read-only and action revisions are pinned to immutable commits.
+The Gradle distribution is verified by checksum, and Dependabot groups weekly
+Gradle and Actions updates.
 
 ## Behavioral Contracts
 

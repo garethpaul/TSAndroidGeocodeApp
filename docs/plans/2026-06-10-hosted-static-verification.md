@@ -18,6 +18,7 @@ could compile the application.
    developers, including unit tests, APK assembly, and warnings-as-errors lint.
 4. Extend the contract checker so permissions, triggers, action pins, matrices,
    timeouts, and commands cannot silently drift.
+5. Keep a manual workflow trigger for maintenance verification.
 
 ## Verification
 

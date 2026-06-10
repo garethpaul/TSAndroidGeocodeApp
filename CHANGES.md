@@ -14,6 +14,7 @@
 - Enabled Android lint warnings-as-errors and resolved the existing warning set.
 - Added least-privilege GitHub Actions verification on Python 3.10/3.12 and a
   full JDK 17 Android test, assembly, and lint job with immutable action pins.
+- Added a manual workflow trigger for maintenance verification.
 - Verified the Gradle distribution by checksum, installed exact Android SDK
   packages in CI, and added grouped weekly Gradle and Actions updates.
 - Extended static contracts to enforce the modern toolchain, tests, workflow,
