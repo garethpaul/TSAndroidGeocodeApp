@@ -2,12 +2,22 @@
 
 ## 2026-06-10
 
-- Added least-privilege GitHub Actions verification on Python 3.10 and 3.12
-  with immutable action pins and a bounded runtime.
-- Extended static contracts to enforce workflow triggers, permissions, action
-  provenance, matrix coverage, timeout, and the shared `make check` command.
-- Documented that hosted verification covers static contracts while Android
-  APK assembly still requires a compatible legacy toolchain.
+- Restored a reproducible Android build with Gradle 8.11.1, Android Gradle
+  Plugin 8.9.2, Android SDK 35, JDK 17, and AndroidX AppCompat 1.7.1.
+- Raised the supported device floor from API 15 to API 21, matching current
+  AppCompat requirements, and added Android 12+ backup/transfer exclusions.
+- Extracted shared finite-coordinate and address normalization logic and added
+  five JVM unit tests for null, whitespace, geographic boundaries, out-of-range
+  values, `NaN`, and infinity.
+- Removed the undeclared deprecated AsyncTask activity and replaced XML click
+  reflection with explicit listeners in the active activity.
+- Enabled Android lint warnings-as-errors and resolved the existing warning set.
+- Added least-privilege GitHub Actions verification on Python 3.10/3.12 and a
+  full JDK 17 Android test, assembly, and lint job with immutable action pins.
+- Verified the Gradle distribution by checksum, installed exact Android SDK
+  packages in CI, and added grouped weekly Gradle and Actions updates.
+- Extended static contracts to enforce the modern toolchain, tests, workflow,
+  privacy rules, and shared `make check` command.
 
 ## 2026-06-09
 

@@ -78,20 +78,23 @@ def check_xml_resources():
         "app/src/main/res/values/strings.xml",
         "app/src/main/res/values/styles.xml",
         "app/src/main/res/values/dimens.xml",
+        "app/src/main/res/xml/data_extraction_rules.xml",
     ]:
         parse_xml(relative_path)
 
 
 def check_manifest_contracts():
     manifest = parse_xml("app/src/main/AndroidManifest.xml").getroot()
-    package_name = manifest.attrib["package"]
-    require(package_name == "com.sample.foo.tsgeocodeapp", "manifest package changed unexpectedly")
-
     application = manifest.find("application")
     require(application is not None, "manifest must declare an application")
     require(
         application.attrib.get(f"{{{ANDROID_NS}}}allowBackup") == "false",
         "manifest application must explicitly disable app-data backup",
+    )
+    require(
+        application.attrib.get(f"{{{ANDROID_NS}}}dataExtractionRules")
+        == "@xml/data_extraction_rules",
+        "manifest must disable Android 12+ cloud backup and device transfer",
     )
 
     service_names = {
@@ -115,7 +118,7 @@ def check_manifest_contracts():
 
 def check_gradle_application_id():
     build_gradle = read_text("app/build.gradle")
-    match = re.search(r'applicationId\s+"([^"]+)"', build_gradle)
+    match = re.search(r"applicationId\s+['\"]([^'\"]+)['\"]", build_gradle)
     require(match is not None, "app/build.gradle must declare an applicationId")
     require(
         match.group(1) == "com.sample.foo.tsgeocodeapp",
@@ -129,10 +132,16 @@ def check_hosted_verification():
         "pull_request:",
         "branches:\n      - master",
         "permissions:\n  contents: read",
+        "cancel-in-progress: true",
         "timeout-minutes: 5",
+        "timeout-minutes: 15",
         'python-version: ["3.10", "3.12"]',
         "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10",
         "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405",
+        "actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654",
+        "java-version: \"17\"",
+        "run: make static",
+        'sdkmanager "platforms;android-35" "build-tools;35.0.0"',
         "run: make check",
     ]
     for contract in required_contracts:
@@ -142,22 +151,23 @@ def check_hosted_verification():
 
 def check_coordinate_input_guard():
     main_activity = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/MainActivity.java")
-    async_activity = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/MainActivityWithAsyncTask.java")
     service = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/GeocodeAddressIntentService.java")
+    validator = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/GeocodeInputValidator.java")
+    validator_test = read_text("app/src/test/java/com/sample/foo/tsgeocodeapp/GeocodeInputValidatorTest.java")
     strings = read_text("app/src/main/res/values/strings.xml")
 
-    for source_name, source in (
-        ("MainActivity", main_activity),
-        ("MainActivityWithAsyncTask", async_activity),
-    ):
-        require(
-            "import android.widget.CheckBox;" not in source,
-            f"{source_name} must not import the removed checkbox widget",
-        )
-        require(
-            "R.id.checkbox" not in source,
-            f"{source_name} must not reference a layout checkbox that is not declared",
-        )
+    require(
+        not (ROOT / "app/src/main/java/com/sample/foo/tsgeocodeapp/MainActivityWithAsyncTask.java").exists(),
+        "deprecated, undeclared AsyncTask activity must remain removed",
+    )
+    require(
+        "import android.widget.CheckBox;" not in main_activity,
+        "MainActivity must not import the removed checkbox widget",
+    )
+    require(
+        "R.id.checkbox" not in main_activity,
+        "MainActivity must not reference a layout checkbox that is not declared",
+    )
 
     match = re.search(
         r"public void onButtonClicked\(View view\) \{(?P<body>.*?)\n    \}",
@@ -172,8 +182,8 @@ def check_coordinate_input_guard():
         "invalid coordinate feedback must use the shared string resource",
     )
     require(
-        "String addressName = addressEdit.getText().toString().trim();" in body,
-        "MainActivity must trim address-name input before validation",
+        "GeocodeInputValidator.normalizeAddress" in body,
+        "MainActivity must normalize address-name input before validation",
     )
     require(
         "if(addressName.length() == 0)" in body,
@@ -196,9 +206,8 @@ def check_coordinate_input_guard():
         "out-of-range coordinates must be rejected before starting the service",
     )
     require(
-        "latitude >= -90 && latitude <= 90" in main_activity
-        and "longitude >= -180 && longitude <= 180" in main_activity,
-        "MainActivity must define latitude/longitude range limits",
+        "GeocodeInputValidator.isCoordinateInRange(latitude, longitude)" in main_activity,
+        "MainActivity must delegate coordinate validation to the tested validator",
     )
     require(
         re.search(r"catch \(NumberFormatException [^)]+\) \{\s*Toast\.makeText", body, re.DOTALL),
@@ -236,53 +245,7 @@ def check_coordinate_input_guard():
     )
 
     require(
-        "import android.widget.Toast;" in async_activity,
-        "async activity must import Toast for validation feedback",
-    )
-    require(
-        "catch (NumberFormatException" in async_activity,
-        "async activity must guard invalid numeric coordinates before starting AsyncTask",
-    )
-    require(
-        "R.string.invalid_latitude_longitude" in async_activity,
-        "async activity invalid coordinate feedback must use the shared string resource",
-    )
-    require(
-        "if(!isCoordinateInRange(latitude, longitude))" in async_activity,
-        "async activity must reject out-of-range coordinates before starting AsyncTask",
-    )
-    require(
-        "latitude >= -90 && latitude <= 90" in async_activity
-        and "longitude >= -180 && longitude <= 180" in async_activity,
-        "async activity must define latitude/longitude range limits",
-    )
-    require(
-        "new GeocodeAsyncTask(fetchType" in async_activity,
-        "async activity must pass validated request values into GeocodeAsyncTask",
-    )
-    require(
-        async_activity.index("if(!isCoordinateInRange(latitude, longitude))")
-        < async_activity.index("new GeocodeAsyncTask(fetchType, null, latitude, longitude)"),
-        "async coordinate range guard must run before starting AsyncTask",
-    )
-    require(
-        "GeocodeAsyncTask(int taskFetchType, String addressName, double latitude, double longitude)" in async_activity,
-        "GeocodeAsyncTask must capture validated request values",
-    )
-    require(
-        "Double.parseDouble(latitudeEdit.getText().toString())" not in async_activity.split("protected Address doInBackground", 1)[-1],
-        "GeocodeAsyncTask must not parse latitude from UI text in doInBackground",
-    )
-    require(
-        "Double.parseDouble(longitudeEdit.getText().toString())" not in async_activity.split("protected Address doInBackground", 1)[-1],
-        "GeocodeAsyncTask must not parse longitude from UI text in doInBackground",
-    )
-    require(
-        "i <= address.getMaxAddressLineIndex()" in async_activity,
-        "async activity must include the final address line when rendering results",
-    )
-    require(
-        'name = name == null ? "" : name.trim();' in service,
+        "name = GeocodeInputValidator.normalizeAddress(name);" in service,
         "IntentService must normalize address-name extras before geocoding",
     )
     require(
@@ -307,9 +270,8 @@ def check_coordinate_input_guard():
         "IntentService must reject out-of-range coordinates before geocoding",
     )
     require(
-        "latitude >= -90 && latitude <= 90" in service
-        and "longitude >= -180 && longitude <= 180" in service,
-        "IntentService must define latitude/longitude range limits",
+        "GeocodeInputValidator.isCoordinateInRange(latitude, longitude)" in service,
+        "IntentService must delegate coordinate validation to the tested validator",
     )
     require(
         service.index("if(!isCoordinateInRange(latitude, longitude))")
@@ -319,6 +281,43 @@ def check_coordinate_input_guard():
     require(
         service.count("i <= address.getMaxAddressLineIndex()") >= 2,
         "IntentService must include the final address line in all result loops",
+    )
+    for contract in (
+        "Double.isFinite(latitude)",
+        "Double.isFinite(longitude)",
+        "latitude >= -90",
+        "latitude <= 90",
+        "longitude >= -180",
+        "longitude <= 180",
+    ):
+        require(contract in validator, f"coordinate validator is missing {contract!r}")
+    for test_name in (
+        "normalizeAddressTrimsInput",
+        "normalizeAddressHandlesMissingInput",
+        "coordinatesIncludeGeographicBoundaries",
+        "coordinatesRejectValuesOutsideGeographicBoundaries",
+        "coordinatesRejectNonFiniteValues",
+    ):
+        require(test_name in validator_test, f"validator unit test is missing {test_name}")
+
+
+def check_modern_android_build():
+    root_build = read_text("build.gradle")
+    app_build = read_text("app/build.gradle")
+    wrapper = read_text("gradle/wrapper/gradle-wrapper.properties")
+    require('version "8.9.2"' in root_build, "Android Gradle Plugin must remain pinned")
+    require("compileSdk 35" in app_build, "compileSdk must remain on API 35")
+    require("targetSdk 35" in app_build, "targetSdk must remain on API 35")
+    require("minSdk 21" in app_build, "minSdk must match AndroidX AppCompat support")
+    require("warningsAsErrors true" in app_build, "Android lint warnings must fail verification")
+    require(
+        "gradle-8.11.1-bin.zip" in wrapper,
+        "Gradle wrapper distribution must remain pinned to 8.11.1",
+    )
+    require(
+        "distributionSha256Sum=f397b287023acdba1e9f6fc5ea72d22dd63669d59ed4a289a29b1a76eee151c6"
+        in wrapper,
+        "Gradle wrapper distribution checksum must remain pinned",
     )
 
 
@@ -330,6 +329,7 @@ def main():
         check_gradle_application_id,
         check_hosted_verification,
         check_coordinate_input_guard,
+        check_modern_android_build,
     ]
     try:
         for check in checks:

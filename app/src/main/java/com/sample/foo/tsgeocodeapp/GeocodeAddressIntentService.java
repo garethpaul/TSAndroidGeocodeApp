@@ -42,7 +42,7 @@ public class GeocodeAddressIntentService extends IntentService {
 
         if(fetchType == Constants.USE_ADDRESS_NAME) {
             String name = intent.getStringExtra(Constants.LOCATION_NAME_DATA_EXTRA);
-            name = name == null ? "" : name.trim();
+            name = GeocodeInputValidator.normalizeAddress(name);
             if(TextUtils.isEmpty(name)) {
                 errorMessage = "Invalid Address Name";
                 Log.e(TAG, errorMessage);
@@ -111,8 +111,7 @@ public class GeocodeAddressIntentService extends IntentService {
     }
 
     private boolean isCoordinateInRange(double latitude, double longitude) {
-        return latitude >= -90 && latitude <= 90 &&
-                longitude >= -180 && longitude <= 180;
+        return GeocodeInputValidator.isCoordinateInRange(latitude, longitude);
     }
 
     private void deliverResultToReceiver(int resultCode, String message, Address address) {

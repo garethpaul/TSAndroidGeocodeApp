@@ -5,15 +5,17 @@ import android.location.Address;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.ResultReceiver;
-import android.support.v7.app.AppCompatActivity;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
+import android.widget.Button;
 import android.widget.ProgressBar;
 import android.widget.RadioButton;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.appcompat.app.AppCompatActivity;
 
 public class MainActivity extends AppCompatActivity {
 
@@ -39,31 +41,28 @@ public class MainActivity extends AppCompatActivity {
         progressBar = (ProgressBar) findViewById(R.id.progressBar);
         infoText = (TextView) findViewById(R.id.infoText);
 
+        findViewById(R.id.radioAddress).setOnClickListener(this::onRadioButtonClicked);
+        findViewById(R.id.radioLocation).setOnClickListener(this::onRadioButtonClicked);
+        ((Button) findViewById(R.id.actionButton)).setOnClickListener(this::onButtonClicked);
+
         mResultReceiver = new AddressResultReceiver(null);
     }
 
     public void onRadioButtonClicked(View view) {
         boolean checked = ((RadioButton) view).isChecked();
 
-        switch(view.getId()) {
-            case R.id.radioAddress:
-                if (checked) {
-                    fetchType = Constants.USE_ADDRESS_NAME;
-                    longitudeEdit.setEnabled(false);
-                    latitudeEdit.setEnabled(false);
-                    addressEdit.setEnabled(true);
-                    addressEdit.requestFocus();
-                }
-                break;
-            case R.id.radioLocation:
-                if (checked) {
-                    fetchType = Constants.USE_ADDRESS_LOCATION;
-                    latitudeEdit.setEnabled(true);
-                    latitudeEdit.requestFocus();
-                    longitudeEdit.setEnabled(true);
-                    addressEdit.setEnabled(false);
-                }
-                break;
+        if (view.getId() == R.id.radioAddress && checked) {
+            fetchType = Constants.USE_ADDRESS_NAME;
+            longitudeEdit.setEnabled(false);
+            latitudeEdit.setEnabled(false);
+            addressEdit.setEnabled(true);
+            addressEdit.requestFocus();
+        } else if (view.getId() == R.id.radioLocation && checked) {
+            fetchType = Constants.USE_ADDRESS_LOCATION;
+            latitudeEdit.setEnabled(true);
+            latitudeEdit.requestFocus();
+            longitudeEdit.setEnabled(true);
+            addressEdit.setEnabled(false);
         }
     }
 
@@ -72,7 +71,8 @@ public class MainActivity extends AppCompatActivity {
         intent.putExtra(Constants.RECEIVER, mResultReceiver);
         intent.putExtra(Constants.FETCH_TYPE_EXTRA, fetchType);
         if(fetchType == Constants.USE_ADDRESS_NAME) {
-            String addressName = addressEdit.getText().toString().trim();
+            String addressName = GeocodeInputValidator.normalizeAddress(
+                    addressEdit.getText().toString());
             if(addressName.length() == 0) {
                 Toast.makeText(this, "Please enter an address name", Toast.LENGTH_LONG).show();
                 return;
@@ -115,8 +115,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean isCoordinateInRange(double latitude, double longitude) {
-        return latitude >= -90 && latitude <= 90 &&
-                longitude >= -180 && longitude <= 180;
+        return GeocodeInputValidator.isCoordinateInRange(latitude, longitude);
     }
 
     class AddressResultReceiver extends ResultReceiver {

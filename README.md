@@ -5,117 +5,91 @@
 
 ## Overview
 
-`garethpaul/TSAndroidGeocodeApp` is an Android application or sample. Sample Native Geocode App Android
+`TSAndroidGeocodeApp` is a small Java Android sample that resolves either an
+address name or a latitude/longitude pair through Android's `Geocoder`. The
+activity validates input and delegates geocoding to an `IntentService`, which
+returns the first result through a `ResultReceiver`.
 
-This README is based on the checked-in source, manifests, scripts, and repository metadata on the `master` branch. The project language mix found during review was: Java (5).
+The project is maintained as an educational sample. It is reproducibly
+buildable, but it is not presented as a production geocoding client and has no
+device-level test suite.
 
-## Repository Contents
+## Supported Toolchain
 
-- `app` - source or example code
-- `CHANGES.md` - maintenance history for Android contract checks
-- `Makefile` - local verification entry points
-- `docs/plans` - completed maintenance plans for the current baseline
-- `.github/workflows/check.yml` - hosted static verification for pushes and pull requests
-- `plans` - historical implementation notes
-- `scripts` - static Android contract validators
-- `SECURITY.md` - security reporting and disclosure guidance
-- `VISION.md` - project direction and maintenance guardrails
+- JDK 17
+- Android SDK Platform 35 and Build Tools 35.0.0
+- Gradle 8.11.1 through the checked-in wrapper
+- Android Gradle Plugin 8.9.2
+- AndroidX AppCompat 1.7.1
+- Android API 21 minimum and API 35 target
 
-Additional scan context:
+The API 21 floor is required by the current AndroidX AppCompat release.
 
-- Source directories: app
-- Dependency and build manifests: app/build.gradle
-- Entry points or build surfaces: Gradle build files
-- Test-looking files: app/src/androidTest/java/com/sample/foo/tsgeocodeapp/ApplicationTest.java
+## Setup
 
-## Getting Started
-
-### Prerequisites
-
-- Git
-- Android Studio or a compatible Android SDK
-- Gradle or the checked-in Gradle wrapper when present
-
-### Setup
+Install JDK 17 and Android SDK Platform 35, then point `ANDROID_HOME` at the
+SDK. The Gradle wrapper downloads the pinned Gradle distribution.
 
 ```bash
 git clone https://github.com/garethpaul/TSAndroidGeocodeApp.git
 cd TSAndroidGeocodeApp
+export JAVA_HOME=/path/to/jdk-17
+export ANDROID_HOME=/path/to/android-sdk
+make check
 ```
 
-The setup commands above are derived from repository files. Legacy mobile, Python, or JavaScript samples may require older SDKs or package versions than a modern workstation uses by default.
+Open the repository root in Android Studio to run the debug application on an
+API 21+ device or emulator. The application uses Android's platform geocoder,
+so result availability and quality depend on the device implementation and
+network conditions.
 
-## Running or Using the Project
+## Verification
 
-- Use Android Studio to open the `app` module with an Android SDK that supports the legacy Gradle and support-library versions.
-- Run `make check` for repository static checks. The `build` step runs Gradle only when a wrapper or root `settings.gradle` is available.
-- GitHub Actions runs the same static gate on Python 3.10 and 3.12 with read-only repository permissions. It does not claim to assemble an APK.
+- `make static` validates source, manifest, resource, build, workflow, and
+  maintenance-plan contracts.
+- `make test` runs the five JVM unit tests for address normalization and
+  coordinate boundaries, including `NaN` and infinity rejection.
+- `make build` assembles the debug APK.
+- `make lint` runs static contracts and Android lint with warnings treated as
+  errors.
+- `make check` runs the complete unit-test, APK, lint, and contract gate.
 
-## Testing and Verification
+GitHub Actions runs the static contracts on Python 3.10 and 3.12 and runs the
+full Android gate on JDK 17. Workflow permissions are read-only and action
+revisions are pinned to immutable commits. The Gradle distribution is verified
+by checksum, and Dependabot groups weekly Gradle and Actions updates.
 
-- `make check` runs XML parsing checks, manifest/service/activity contract
-  checks, Gradle application-id checks, and coordinate input guard checks for
-  both geocoding activity variants. It also requires primary activity and
-  IntentService address-name input to be trimmed before service geocode work
-  starts, and latitude/longitude values to be range-checked before activity or
-  service geocoder work starts. The IntentService must also reject direct
-  requests that do not include a `ResultReceiver` before creating a geocoder.
-  Primary activity result handling must also guard missing result bundles,
-  addresses, and result text before rendering geocode output. Service and
-  legacy AsyncTask result formatting must include the final Android address
-  line returned by `getMaxAddressLineIndex()`. The checked-in manifest must
-  also keep Android app-data backup disabled by default. Activity source must
-  not reference layout widget ids that are not declared by the checked-in
-  layout.
-- Static checks also require completed canonical plans under `docs/plans`.
-- Static checks enforce the hosted workflow trigger, least-privilege
-  permissions, immutable action pins, bounded runtime, Python matrix, and
-  `make check` command.
-- Android Studio's test runner when the matching legacy SDK is configured
+## Behavioral Contracts
 
-When the required SDK or runtime is unavailable, use static checks and source review first, then verify on a machine that has the matching platform toolchain.
+- Address names are trimmed and blank names are rejected before geocoding.
+- Coordinates must be finite and inside latitude `[-90, 90]` and longitude
+  `[-180, 180]` before a geocoder call.
+- Direct service requests without a `ResultReceiver` are rejected.
+- Missing or malformed result payloads do not crash UI rendering.
+- Every address line reported by Android is included in the rendered result.
+- App data is excluded from legacy backup, cloud backup, and device transfer.
 
-## Configuration and Secrets
+## Limitations
 
-- No required secret or credential file was identified in the repository scan. If you add integrations later, keep secrets out of git.
+- Android's `IntentService`, synchronous `Geocoder` APIs, and parcelable
+  compatibility methods used by this historical sample are deprecated on
+  newer Android releases.
+- Unit tests cover pure input validation; geocoder behavior and activity/service
+  lifecycle behavior still require device or emulator verification.
+- The sample does not request device location, persist addresses, or include
+  API keys.
 
-## Security and Privacy Notes
+## Repository Guide
 
-- Review changes touching network requests, sockets, or service endpoints; examples from the scan include app/src/androidTest/java/com/sample/foo/tsgeocodeapp/ApplicationTest.java, app/src/main/AndroidManifest.xml, app/src/main/res/layout/activity_main.xml.
-- Review changes touching mobile permissions or privacy-sensitive device data; examples from the scan include app/src/main/AndroidManifest.xml, app/src/main/java/com/sample/foo/tsgeocodeapp/GeocodeAddressIntentService.java, app/src/main/java/com/sample/foo/tsgeocodeapp/MainActivity.java, app/src/main/java/com/sample/foo/tsgeocodeapp/MainActivityWithAsyncTask.java, and 1 more.
-- Android app-data backup is disabled by default for the geocoding sample.
-- Review changes touching file, media, JSON, XML, CSV, OCR, or data parsing; examples from the scan include app/src/main/res/layout/activity_main.xml, app/src/main/res/values-w820dp/dimens.xml.
-
-## Maintenance Notes
-
-- This looks like a legacy Android project or sample. Expect Android SDK, Gradle, and support-library versions to matter.
-- See `SECURITY.md` for vulnerability reporting and safe research guidance.
-- See `VISION.md` for project direction and contribution guardrails.
-- See `docs/plans/2026-06-08-tsandroidgeocodeapp-baseline.md` for the
-  canonical Android geocode contract baseline.
-- See `docs/plans/2026-06-08-async-coordinate-guard.md` for AsyncTask
-  coordinate validation coverage.
-- See `docs/plans/2026-06-09-address-name-trim-guard.md` for primary activity
-  address-name validation coverage.
-- See `docs/plans/2026-06-09-coordinate-range-guard.md` for coordinate range
-  validation coverage.
-- See `docs/plans/2026-06-09-service-address-name-guard.md` for IntentService
-  address-name extra validation coverage.
-- See `docs/plans/2026-06-09-service-coordinate-range-guard.md` for
-  IntentService coordinate range validation coverage.
-- See `docs/plans/2026-06-09-service-result-receiver-guard.md` for
-  IntentService receiver validation coverage.
-- See `docs/plans/2026-06-09-result-receiver-payload-guard.md` for primary
-  activity result payload validation coverage.
-- See `docs/plans/2026-06-09-address-line-index-guard.md` for inclusive
-  geocoder address-line result coverage.
-- See `docs/plans/2026-06-09-android-backup-opt-out.md` for the Android
-  app-data backup opt-out.
-- See `docs/plans/2026-06-09-stale-checkbox-reference.md` for stale layout
-  widget reference cleanup.
-- See `docs/plans/2026-06-10-hosted-static-verification.md` for the hosted
-  static verification boundary and workflow contracts.
+- `app/src/main` contains the activity, service, validator, manifest, and UI.
+- `app/src/test` contains dependency-free JVM validation tests.
+- `scripts/check_android_contracts.py` enforces repository-level contracts.
+- `docs/plans` records completed maintenance changes and their validation.
+- `CHANGES.md`, `SECURITY.md`, and `VISION.md` describe maintenance history,
+  disclosure guidance, and project scope.
 
 ## Contributing
 
-Keep changes small and tied to the project that is already present in this repository. For code changes, document the toolchain used, avoid committing generated dependency directories or local configuration, and update this README when setup or verification steps change.
+Keep changes focused on the sample's existing geocoding flow. Do not commit API
+keys or real user location data. Run `make check` before opening a pull request
+and update documentation when supported SDK or build requirements change.

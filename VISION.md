@@ -1,14 +1,14 @@
 ## TS Android Geocode App Vision
 
-TS Android Geocode App is a sparse Android geocoding sample with Gradle
-configuration, a manifest, internet permission, and declared activity/service
+TS Android Geocode App is a small, reproducibly buildable Android geocoding
+sample with a manifest, internet permission, and declared activity/service
 entry points.
 
-The repository is useful as a partial archive of an Android geocode app
-structure with checked-in activity and service source files.
+The repository is useful as an educational example of validating address or
+coordinate input before delegating platform geocoder work to a service.
 
-The goal is to preserve what exists, keep the legacy behavior understandable,
-and make small defensive improvements without broad rewrites.
+The goal is to preserve the sample's behavior while keeping its build,
+dependencies, validation, and privacy defaults verifiable on supported tools.
 
 The current focus is:
 
@@ -17,13 +17,13 @@ Priority:
 - Preserve the Gradle and manifest structure
 - Keep internet permission and service declarations visible
 - Keep geocoding behavior claims aligned with checked-in code
-- Treat Android SDK and support library versions as legacy
+- Keep the JDK 17, API 35, Gradle, and AndroidX toolchain reproducible
 - Keep Gradle application id aligned with the manifest package
 - Guard user-entered coordinates before invoking geocoder services
 - Reject out-of-range coordinates before invoking geocoder services, including
   direct IntentService requests
 - Trim and validate address-name requests before invoking geocoder services
-- Keep background geocode tasks consuming validated request values
+- Keep background geocode work consuming validated request values
 - Reject IntentService geocode requests that cannot receive a result
 - Guard geocode result payloads before updating the primary activity UI
 - Include the final Android address line when rendering geocode results
@@ -33,10 +33,10 @@ Priority:
 
 Next priorities:
 
-- Add README notes describing the intended geocoding flow
-- Add focused checks for UI and service contracts
-- Add setup notes for Android SDK versions
-- Decide whether to archive or rebuild the sample
+- Replace deprecated `IntentService` and synchronous geocoder calls if the
+  sample receives further lifecycle-focused development
+- Add emulator coverage for the activity/service result flow
+- Verify behavior against multiple platform geocoder implementations
 
 Contribution rules:
 
@@ -63,7 +63,7 @@ retention.
 - Silent location or address storage
 - Out-of-range geocoder requests that rely on background exceptions
 - Source references to undeclared layout widgets
-- Broad rewrites without documenting missing source
+- Broad rewrites without preserving the educational geocoding flow
 
 This list is a roadmap guardrail, not a permanent rule.
 Strong user demand and strong technical rationale can change it.

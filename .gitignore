@@ -12,6 +12,8 @@
 bin/
 gen/
 out/
+__pycache__/
+*.py[cod]
 
 # Gradle files
 .gradle/
@@ -38,6 +40,10 @@ captures/
 .idea/tasks.xml
 .idea/gradle.xml
 .idea/libraries
+.idea/caches/
+.idea/misc.xml
+.idea/modules.xml
+.idea/runConfigurations.xml
 
 # Keystore files
 *.jks

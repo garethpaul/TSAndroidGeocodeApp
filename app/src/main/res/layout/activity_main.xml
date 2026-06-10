@@ -15,6 +15,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:hint="@string/latitude"
+        android:importantForAutofill="no"
         android:inputType="numberDecimal|numberSigned"/>
 
     <EditText
@@ -23,6 +24,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/latitudeEdit"
         android:hint="@string/longitude"
+        android:importantForAutofill="no"
         android:inputType="numberDecimal|numberSigned"/>
 
     <EditText
@@ -33,6 +35,8 @@
         android:gravity="top"
         android:minLines="4"
         android:hint="@string/address"
+        android:importantForAutofill="no"
+        android:inputType="textPostalAddress|textMultiLine"
         android:scrollHorizontally="false"
         android:scrollbars="vertical"
         android:enabled="false"/>
@@ -51,16 +55,14 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:text="@string/use_location"
-            android:checked="true"
-            android:onClick="onRadioButtonClicked"/>
+            android:checked="true"/>
 
         <RadioButton
             android:id="@+id/radioAddress"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="@string/use_address"
-            android:onClick="onRadioButtonClicked"/>
+            android:text="@string/use_address"/>
     </RadioGroup>
 
     <Button
@@ -69,8 +71,7 @@
         android:layout_height="wrap_content"
         android:layout_below="@id/radioGroup"
         android:layout_centerHorizontal="true"
-        android:text="@string/fetch"
-        android:onClick="onButtonClicked"/>
+        android:text="@string/fetch"/>
 
     <TextView
         android:id="@+id/infoText"

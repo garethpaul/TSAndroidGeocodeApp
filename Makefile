@@ -1,21 +1,21 @@
-.PHONY: build check lint test verify
+.PHONY: build check lint static test verify
 
 PYTHON ?= python3
+GRADLEW ?= ./gradlew
 
-lint:
+static:
 	$(PYTHON) scripts/check_android_contracts.py
 
-test: lint
+test:
+	$(GRADLEW) --no-daemon testDebugUnitTest
 
 build:
-	@if [ -x ./gradlew ]; then \
-		./gradlew assembleDebug; \
-	elif [ -f settings.gradle ] && command -v gradle >/dev/null 2>&1; then \
-		gradle assembleDebug; \
-	else \
-		echo "Android build skipped: no Gradle wrapper or root settings.gradle is checked in."; \
-	fi
+	$(GRADLEW) --no-daemon assembleDebug
 
-verify: lint test build
+lint: static
+	$(GRADLEW) --no-daemon lintDebug
+
+verify: static
+	$(GRADLEW) --no-daemon testDebugUnitTest assembleDebug lintDebug
 
 check: verify
