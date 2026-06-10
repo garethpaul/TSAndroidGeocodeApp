@@ -11,7 +11,7 @@ manifest, privacy, and dependency requirements were not validated.
 
 ## Plan
 
-1. Restore a pinned JDK 17, Gradle, Android Gradle Plugin, and API 35 build.
+1. Restore a pinned JDK 17, Gradle, Android Gradle Plugin, and API 36 build.
 2. Migrate the UI dependency from the retired support library to AndroidX.
 3. Extract pure address and coordinate validation and cover boundary and
    malformed values with JVM unit tests.
@@ -25,6 +25,6 @@ manifest, privacy, and dependency requirements were not validated.
 
 - `make check`
 - Five `GeocodeInputValidatorTest` tests passed
-- Debug APK assembled successfully against API 35
+- Debug APK assembled successfully against API 36
 - Android lint passed with warnings treated as errors
 - `git diff --check`

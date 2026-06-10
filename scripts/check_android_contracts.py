@@ -118,7 +118,7 @@ def check_manifest_contracts():
 
 def check_gradle_application_id():
     build_gradle = read_text("app/build.gradle")
-    match = re.search(r"applicationId\s+['\"]([^'\"]+)['\"]", build_gradle)
+    match = re.search(r"applicationId\s*=\s*['\"]([^'\"]+)['\"]", build_gradle)
     require(match is not None, "app/build.gradle must declare an applicationId")
     require(
         match.group(1) == "com.sample.foo.tsgeocodeapp",
@@ -141,7 +141,7 @@ def check_hosted_verification():
         "actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654",
         "java-version: \"17\"",
         "run: make static",
-        '$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-35" "build-tools;35.0.0"',
+        '$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;35.0.0"',
         "run: make check",
     ]
     for contract in required_contracts:
@@ -305,17 +305,17 @@ def check_modern_android_build():
     root_build = read_text("build.gradle")
     app_build = read_text("app/build.gradle")
     wrapper = read_text("gradle/wrapper/gradle-wrapper.properties")
-    require('version "8.9.2"' in root_build, "Android Gradle Plugin must remain pinned")
-    require("compileSdk 35" in app_build, "compileSdk must remain on API 35")
-    require("targetSdk 35" in app_build, "targetSdk must remain on API 35")
-    require("minSdk 21" in app_build, "minSdk must match AndroidX AppCompat support")
-    require("warningsAsErrors true" in app_build, "Android lint warnings must fail verification")
+    require('version "8.10.1"' in root_build, "Android Gradle Plugin must remain pinned")
+    require("compileSdk = 36" in app_build, "compileSdk must remain on API 36")
+    require("targetSdk = 36" in app_build, "targetSdk must remain on API 36")
+    require("minSdk = 21" in app_build, "minSdk must match AndroidX AppCompat support")
+    require("warningsAsErrors = true" in app_build, "Android lint warnings must fail verification")
     require(
-        "gradle-8.11.1-bin.zip" in wrapper,
-        "Gradle wrapper distribution must remain pinned to 8.11.1",
+        "gradle-8.14.5-bin.zip" in wrapper,
+        "Gradle wrapper distribution must remain pinned to 8.14.5",
     )
     require(
-        "distributionSha256Sum=f397b287023acdba1e9f6fc5ea72d22dd63669d59ed4a289a29b1a76eee151c6"
+        "distributionSha256Sum=6f74b601422d6d6fc4e1f9a1ab6522f642c2fdcbc15ae33ebd30ba3d7198e854"
         in wrapper,
         "Gradle wrapper distribution checksum must remain pinned",
     )

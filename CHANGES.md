@@ -2,8 +2,8 @@
 
 ## 2026-06-10
 
-- Restored a reproducible Android build with Gradle 8.11.1, Android Gradle
-  Plugin 8.9.2, Android SDK 35, JDK 17, and AndroidX AppCompat 1.7.1.
+- Restored a reproducible Android build with Gradle 8.14.5, Android Gradle
+  Plugin 8.10.1, Android SDK 36, JDK 17, and AndroidX AppCompat 1.7.1.
 - Raised the supported device floor from API 15 to API 21, matching current
   AppCompat requirements, and added Android 12+ backup/transfer exclusions.
 - Extracted shared finite-coordinate and address normalization logic and added

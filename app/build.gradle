@@ -3,20 +3,20 @@ plugins {
 }
 
 android {
-    namespace 'com.sample.foo.tsgeocodeapp'
-    compileSdk 35
+    namespace = 'com.sample.foo.tsgeocodeapp'
+    compileSdk = 36
 
     defaultConfig {
-        applicationId 'com.sample.foo.tsgeocodeapp'
-        minSdk 21
-        targetSdk 35
-        versionCode 1
-        versionName '1.0'
+        applicationId = 'com.sample.foo.tsgeocodeapp'
+        minSdk = 21
+        targetSdk = 36
+        versionCode = 1
+        versionName = '1.0'
     }
 
     buildTypes {
         release {
-            minifyEnabled false
+            minifyEnabled = false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
@@ -27,7 +27,7 @@ android {
     }
 
     lint {
-        warningsAsErrors true
+        warningsAsErrors = true
     }
 }
 

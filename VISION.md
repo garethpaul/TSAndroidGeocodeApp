@@ -17,7 +17,7 @@ Priority:
 - Preserve the Gradle and manifest structure
 - Keep internet permission and service declarations visible
 - Keep geocoding behavior claims aligned with checked-in code
-- Keep the JDK 17, API 35, Gradle, and AndroidX toolchain reproducible
+- Keep the JDK 17, API 36, Gradle, and AndroidX toolchain reproducible
 - Keep Gradle application id aligned with the manifest package
 - Guard user-entered coordinates before invoking geocoder services
 - Reject out-of-range coordinates before invoking geocoder services, including

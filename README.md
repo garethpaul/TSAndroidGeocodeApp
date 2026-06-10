@@ -17,17 +17,17 @@ device-level test suite.
 ## Supported Toolchain
 
 - JDK 17
-- Android SDK Platform 35 and Build Tools 35.0.0
-- Gradle 8.11.1 through the checked-in wrapper
-- Android Gradle Plugin 8.9.2
+- Android SDK Platform 36 and Build Tools 35.0.0
+- Gradle 8.14.5 through the checked-in wrapper
+- Android Gradle Plugin 8.10.1
 - AndroidX AppCompat 1.7.1
-- Android API 21 minimum and API 35 target
+- Android API 21 minimum and API 36 target
 
 The API 21 floor is required by the current AndroidX AppCompat release.
 
 ## Setup
 
-Install JDK 17 and Android SDK Platform 35, then point `ANDROID_HOME` at the
+Install JDK 17 and Android SDK Platform 36, then point `ANDROID_HOME` at the
 SDK. The Gradle wrapper downloads the pinned Gradle distribution.
 
 ```bash
