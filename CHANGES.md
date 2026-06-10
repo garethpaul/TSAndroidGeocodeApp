@@ -2,6 +2,8 @@
 
 ## 2026-06-10
 
+- Derived each geocode request mode from the checked radio button so activity
+  recreation cannot reset behavior while preserving a different visible mode.
 - Replaced the Activity-retaining result receiver with a static receiver that
   uses a weak Activity reference, main-looper delivery, and lifecycle guards.
 - Made every Make target independent of the caller's working directory.

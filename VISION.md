@@ -28,6 +28,7 @@ Priority:
 - Guard geocode result payloads before updating the primary activity UI
 - Avoid retaining or updating stale activities while background geocode work
   is in progress
+- Keep geocode request mode aligned with radio state restored after recreation
 - Include the final Android address line when rendering geocode results
 - Keep Android app-data backup disabled by default
 - Keep activity source aligned with declared layout widget ids

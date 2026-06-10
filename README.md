@@ -70,6 +70,8 @@ Gradle and Actions updates.
 - Missing or malformed result payloads do not crash UI rendering.
 - Background results use a main-looper receiver with a weak Activity reference,
   and results are discarded after the Activity starts finishing or is destroyed.
+- Fetch requests derive their mode from the checked radio button, keeping
+  restored UI state aligned with the request after Activity recreation.
 - Every address line reported by Android is included in the rendered result.
 - App data is excluded from legacy backup, cloud backup, and device transfer.
 

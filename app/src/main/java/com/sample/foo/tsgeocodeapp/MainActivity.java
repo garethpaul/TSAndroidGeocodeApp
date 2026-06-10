@@ -28,8 +28,6 @@ public class MainActivity extends AppCompatActivity {
     ProgressBar progressBar;
     TextView infoText;
 
-    int fetchType = Constants.USE_ADDRESS_LOCATION;
-
     private static final String TAG = "MAIN_ACTIVITY";
     private static final String NO_GEOCODE_RESULT = "No geocode result";
 
@@ -55,13 +53,11 @@ public class MainActivity extends AppCompatActivity {
         boolean checked = ((RadioButton) view).isChecked();
 
         if (view.getId() == R.id.radioAddress && checked) {
-            fetchType = Constants.USE_ADDRESS_NAME;
             longitudeEdit.setEnabled(false);
             latitudeEdit.setEnabled(false);
             addressEdit.setEnabled(true);
             addressEdit.requestFocus();
         } else if (view.getId() == R.id.radioLocation && checked) {
-            fetchType = Constants.USE_ADDRESS_LOCATION;
             latitudeEdit.setEnabled(true);
             latitudeEdit.requestFocus();
             longitudeEdit.setEnabled(true);
@@ -70,6 +66,9 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void onButtonClicked(View view) {
+        int fetchType = ((RadioButton) findViewById(R.id.radioAddress)).isChecked()
+                ? Constants.USE_ADDRESS_NAME
+                : Constants.USE_ADDRESS_LOCATION;
         Intent intent = new Intent(this, GeocodeAddressIntentService.class);
         intent.putExtra(Constants.RECEIVER, mResultReceiver);
         intent.putExtra(Constants.FETCH_TYPE_EXTRA, fetchType);

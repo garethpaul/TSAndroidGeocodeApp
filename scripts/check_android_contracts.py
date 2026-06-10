@@ -191,6 +191,10 @@ def check_coordinate_input_guard():
         "R.id.checkbox" not in main_activity,
         "MainActivity must not reference a layout checkbox that is not declared",
     )
+    require(
+        "int fetchType = Constants.USE_ADDRESS_LOCATION;" not in main_activity,
+        "MainActivity must not keep a recreation-prone geocode mode field",
+    )
 
     match = re.search(
         r"public void onButtonClicked\(View view\) \{(?P<body>.*?)\n    \}",
@@ -199,6 +203,16 @@ def check_coordinate_input_guard():
     )
     require(match is not None, "MainActivity.onButtonClicked must be present")
     body = match.group("body")
+
+    require(
+        "((RadioButton) findViewById(R.id.radioAddress)).isChecked()" in body,
+        "MainActivity must derive the fetch mode from the restored radio state",
+    )
+    require(
+        body.index("((RadioButton) findViewById(R.id.radioAddress)).isChecked()")
+        < body.index("intent.putExtra(Constants.FETCH_TYPE_EXTRA, fetchType)"),
+        "MainActivity must derive the fetch mode before creating the service request",
+    )
 
     require(
         "R.string.invalid_latitude_longitude" in body,
