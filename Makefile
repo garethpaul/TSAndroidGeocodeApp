@@ -1,21 +1,22 @@
 .PHONY: build check lint static test verify
 
+ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 PYTHON ?= python3
-GRADLEW ?= ./gradlew
+GRADLEW ?= $(ROOT)/gradlew
 
 static:
-	$(PYTHON) scripts/check_android_contracts.py
+	$(PYTHON) "$(ROOT)/scripts/check_android_contracts.py"
 
 test:
-	$(GRADLEW) --no-daemon testDebugUnitTest
+	cd "$(ROOT)" && "$(GRADLEW)" --no-daemon testDebugUnitTest
 
 build:
-	$(GRADLEW) --no-daemon assembleDebug
+	cd "$(ROOT)" && "$(GRADLEW)" --no-daemon assembleDebug
 
 lint: static
-	$(GRADLEW) --no-daemon lintDebug
+	cd "$(ROOT)" && "$(GRADLEW)" --no-daemon lintDebug
 
 verify: static
-	$(GRADLEW) --no-daemon testDebugUnitTest assembleDebug lintDebug
+	cd "$(ROOT)" && "$(GRADLEW)" --no-daemon testDebugUnitTest assembleDebug lintDebug
 
 check: verify

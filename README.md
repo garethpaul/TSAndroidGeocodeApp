@@ -55,8 +55,9 @@ network conditions.
 - `make check` runs the complete unit-test, APK, lint, and contract gate.
 
 GitHub Actions runs the static contracts on Python 3.10 and 3.12 and runs the
-full Android gate on JDK 17 for pushes, pull requests, and manual runs. Workflow
-permissions are read-only and action revisions are pinned to immutable commits.
+full Android gate on JDK 17 and Ubuntu 24.04 for pushes, pull requests, and
+manual runs. Workflow permissions are read-only and action revisions are
+pinned to immutable commits.
 The Gradle distribution is verified by checksum, and Dependabot groups weekly
 Gradle and Actions updates.
 
@@ -67,6 +68,10 @@ Gradle and Actions updates.
   `[-180, 180]` before a geocoder call.
 - Direct service requests without a `ResultReceiver` are rejected.
 - Missing or malformed result payloads do not crash UI rendering.
+- Background results use a main-looper receiver with a weak Activity reference,
+  and results are discarded after the Activity starts finishing or is destroyed.
+- Fetch requests derive their mode from the checked radio button, keeping
+  restored UI state aligned with the request after Activity recreation.
 - Every address line reported by Android is included in the rendered result.
 - App data is excluded from legacy backup, cloud backup, and device transfer.
 
@@ -75,8 +80,8 @@ Gradle and Actions updates.
 - Android's `IntentService`, synchronous `Geocoder` APIs, and parcelable
   compatibility methods used by this historical sample are deprecated on
   newer Android releases.
-- Unit tests cover pure input validation; geocoder behavior and activity/service
-  lifecycle behavior still require device or emulator verification.
+- Unit tests cover pure input validation; geocoder behavior and result delivery
+  across Activity recreation still require device or emulator verification.
 - The sample does not request device location, persist addresses, or include
   API keys.
 
