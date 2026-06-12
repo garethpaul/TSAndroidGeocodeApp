@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-12
+
+- Removed user-entered coordinates and resolved street-address lines from
+  Logcat while preserving generic diagnostics and visible results.
+
 ## 2026-06-10
 
 - Derived each geocode request mode from the checked radio button so activity
@@ -24,6 +29,9 @@
 - Added least-privilege GitHub Actions verification on Python 3.10/3.12 and a
   full JDK 17 Android test, assembly, and lint job with immutable action pins.
 - Added a manual workflow trigger for maintenance verification.
+- Disabled persisted checkout credentials in both hosted jobs and made the
+  contract reject extra workflows, privileged triggers, write permissions, and
+  duplicate action steps.
 - Verified the Gradle distribution by checksum, installed exact Android SDK
   packages in CI, and added grouped weekly Gradle and Actions updates.
 - Extended static contracts to enforce the modern toolchain, tests, workflow,

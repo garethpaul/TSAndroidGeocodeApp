@@ -27,6 +27,9 @@ Helpful reports include:
 - This repository appears to be an Android mobile application or sample. The active security scope is the code and documentation on the default branch.
 - Review found network clients, sockets, web APIs, or service endpoints; changes in those areas should receive security-focused review before merge.
 - Review found mobile permission or privacy-sensitive data handling; changes in those areas should receive security-focused review before merge.
+- User-entered coordinates and resolved street-address lines must remain out of
+  Logcat; generic validation and service diagnostics may be logged without the
+  location values.
 - Android app-data backup should stay disabled by default for this sample.
 - Background result receivers must not strongly retain an Activity or update a
   finishing or destroyed Activity after asynchronous geocoder work completes.
