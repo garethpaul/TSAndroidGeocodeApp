@@ -16,6 +16,7 @@ ANDROID_BACKUP_PLAN = DOCS_PLANS / "2026-06-09-android-backup-opt-out.md"
 STALE_CHECKBOX_PLAN = DOCS_PLANS / "2026-06-09-stale-checkbox-reference.md"
 HOSTED_VERIFICATION_PLAN = DOCS_PLANS / "2026-06-10-hosted-static-verification.md"
 LIFECYCLE_RECEIVER_PLAN = DOCS_PLANS / "2026-06-10-result-receiver-lifecycle.md"
+GEOCODE_LOG_PRIVACY_PLAN = DOCS_PLANS / "2026-06-12-geocode-log-privacy.md"
 
 
 def fail(message):
@@ -63,6 +64,10 @@ def check_docs_plans():
     require(
         LIFECYCLE_RECEIVER_PLAN.exists(),
         "docs/plans/2026-06-10-result-receiver-lifecycle.md is missing",
+    )
+    require(
+        GEOCODE_LOG_PRIVACY_PLAN.exists(),
+        "docs/plans/2026-06-12-geocode-log-privacy.md is missing",
     )
 
     plans = sorted(DOCS_PLANS.glob("*.md")) if DOCS_PLANS.exists() else []
@@ -368,9 +373,25 @@ def check_coordinate_input_guard():
         "IntentService coordinate range guard must run before geocoder lookup",
     )
     require(
-        service.count("i <= address.getMaxAddressLineIndex()") >= 2,
-        "IntentService must include the final address line in all result loops",
+        "i <= address.getMaxAddressLineIndex()" in service,
+        "IntentService must include the final address line in the delivered result",
     )
+    log_calls = re.findall(r"\bLog\.[a-z]+\s*\(.*?\);", service, re.DOTALL)
+    for log_call in log_calls:
+        for sensitive_reference in (
+            "latitude",
+            "longitude",
+            "getAddressLine",
+            "outputAddress",
+            "addressFragments",
+            "addresses.",
+            "address.toString",
+        ):
+            require(
+                sensitive_reference not in log_call,
+                "IntentService Logcat calls must not reference geocode data: "
+                f"{sensitive_reference}",
+            )
     for contract in (
         "Double.isFinite(latitude)",
         "Double.isFinite(longitude)",

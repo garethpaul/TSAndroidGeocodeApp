@@ -61,9 +61,7 @@ public class GeocodeAddressIntentService extends IntentService {
 
             if(!isCoordinateInRange(latitude, longitude)) {
                 errorMessage = "Invalid Latitude or Longitude Used";
-                Log.e(TAG, errorMessage + ". " +
-                        "Latitude = " + latitude + ", Longitude = " +
-                        longitude);
+                Log.e(TAG, errorMessage);
             } else {
                 try {
                     addresses = geocoder.getFromLocation(latitude, longitude, 1);
@@ -72,9 +70,7 @@ public class GeocodeAddressIntentService extends IntentService {
                     Log.e(TAG, errorMessage, ioException);
                 } catch (IllegalArgumentException illegalArgumentException) {
                     errorMessage = "Invalid Latitude or Longitude Used";
-                    Log.e(TAG, errorMessage + ". " +
-                            "Latitude = " + latitude + ", Longitude = " +
-                            longitude, illegalArgumentException);
+                    Log.e(TAG, errorMessage, illegalArgumentException);
                 }
             }
         }
@@ -90,13 +86,6 @@ public class GeocodeAddressIntentService extends IntentService {
             }
             deliverResultToReceiver(Constants.FAILURE_RESULT, errorMessage, null);
         } else {
-            for(Address address : addresses) {
-                String outputAddress = "";
-                for(int i = 0; i <= address.getMaxAddressLineIndex(); i++) {
-                    outputAddress += " --- " + address.getAddressLine(i);
-                }
-                Log.e(TAG, outputAddress);
-            }
             Address address = addresses.get(0);
             ArrayList<String> addressFragments = new ArrayList<>();
 

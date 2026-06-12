@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-12
+
+- Removed user-entered coordinates and resolved street-address lines from
+  Logcat while preserving generic diagnostics and visible results.
+
 ## 2026-06-10
 
 - Derived each geocode request mode from the checked radio button so activity

@@ -30,6 +30,7 @@ Priority:
   is in progress
 - Keep geocode request mode aligned with radio state restored after recreation
 - Include the final Android address line when rendering geocode results
+- Keep user-entered and resolved location data out of Logcat
 - Keep Android app-data backup disabled by default
 - Keep activity source aligned with declared layout widget ids
 - Keep completed maintenance plans under `docs/plans`

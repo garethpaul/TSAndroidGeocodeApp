@@ -74,6 +74,9 @@ by checksum, and Dependabot groups weekly Gradle and Actions updates.
 - Fetch requests derive their mode from the checked radio button, keeping
   restored UI state aligned with the request after Activity recreation.
 - Every address line reported by Android is included in the rendered result.
+- User-entered coordinates and resolved address lines are not copied into
+  Logcat; the service retains generic failure diagnostics only. See
+  `docs/plans/2026-06-12-geocode-log-privacy.md`.
 - App data is excluded from legacy backup, cloud backup, and device transfer.
 
 ## Limitations
