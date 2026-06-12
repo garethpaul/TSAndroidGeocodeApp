@@ -56,10 +56,11 @@ network conditions.
 
 GitHub Actions runs the static contracts on Python 3.10 and 3.12 and runs the
 full Android gate on JDK 17 and Ubuntu 24.04 for pushes, pull requests, and
-manual runs. Workflow permissions are read-only and action revisions are
-pinned to immutable commits.
-The Gradle distribution is verified by checksum, and Dependabot groups weekly
-Gradle and Actions updates.
+manual runs. Workflow permissions are read-only, checkout credentials are not
+persisted, and action revisions are pinned to immutable commits. Repository
+contracts reject extra workflows, privileged pull-request triggers, write
+permissions, and duplicate action steps. The Gradle distribution is verified
+by checksum, and Dependabot groups weekly Gradle and Actions updates.
 
 ## Behavioral Contracts
 
