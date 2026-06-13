@@ -18,6 +18,7 @@ HOSTED_VERIFICATION_PLAN = DOCS_PLANS / "2026-06-10-hosted-static-verification.m
 LIFECYCLE_RECEIVER_PLAN = DOCS_PLANS / "2026-06-10-result-receiver-lifecycle.md"
 GEOCODE_LOG_PRIVACY_PLAN = DOCS_PLANS / "2026-06-12-geocode-log-privacy.md"
 TYPED_RECEIVER_PLAN = DOCS_PLANS / "2026-06-13-typed-result-receiver-extra.md"
+GEOCODER_AVAILABILITY_PLAN = DOCS_PLANS / "2026-06-13-geocoder-availability.md"
 
 
 def fail(message):
@@ -73,6 +74,10 @@ def check_docs_plans():
     require(
         TYPED_RECEIVER_PLAN.exists(),
         "docs/plans/2026-06-13-typed-result-receiver-extra.md is missing",
+    )
+    require(
+        GEOCODER_AVAILABILITY_PLAN.exists(),
+        "docs/plans/2026-06-13-geocoder-availability.md is missing",
     )
 
     plans = sorted(DOCS_PLANS.glob("*.md")) if DOCS_PLANS.exists() else []
@@ -303,8 +308,50 @@ def check_coordinate_input_guard():
         "coordinate range guard must run before starting the service",
     )
     require(
+        "import android.location.Geocoder;" in main_activity,
+        "MainActivity must import the platform Geocoder availability API",
+    )
+    require(
+        "if (!Geocoder.isPresent())" in body,
+        "MainActivity must reject requests when no geocoder backend is present",
+    )
+    activity_availability = re.search(
+        r"if \(!Geocoder\.isPresent\(\)\) \{(?P<body>.*?)\n        \}",
+        body,
+        re.DOTALL,
+    )
+    require(
+        activity_availability is not None,
+        "MainActivity geocoder availability guard must remain a bounded block",
+    )
+    activity_availability_body = activity_availability.group("body")
+    require(
+        "progressBar.setVisibility(View.GONE);" in activity_availability_body,
+        "MainActivity must leave progress hidden when geocoding is unavailable",
+    )
+    require(
+        "R.string.geocoder_unavailable" in activity_availability_body,
+        "MainActivity must show the localized geocoder unavailable message",
+    )
+    require(
+        "return;" in activity_availability_body,
+        "MainActivity must stop before service startup when geocoding is unavailable",
+    )
+    require(
+        body.index("if (!Geocoder.isPresent())") < body.index("progressBar.setVisibility(View.VISIBLE)"),
+        "MainActivity must check geocoder availability before showing progress",
+    )
+    require(
+        body.index("if (!Geocoder.isPresent())") < body.index("startService(intent)"),
+        "MainActivity must check geocoder availability before starting the service",
+    )
+    require(
         '<string name="invalid_latitude_longitude">' in strings,
         "strings.xml must define invalid_latitude_longitude",
+    )
+    require(
+        '<string name="geocoder_unavailable">' in strings,
+        "strings.xml must define geocoder_unavailable",
     )
     for fragment in (
         "import android.text.TextUtils;",
@@ -369,6 +416,39 @@ def check_coordinate_input_guard():
         service.index("if (resultReceiver == null)")
         < service.index("Geocoder geocoder = new Geocoder"),
         "IntentService must validate ResultReceiver before creating the geocoder",
+    )
+    require(
+        "if (!Geocoder.isPresent())" in service,
+        "IntentService must reject requests when no geocoder backend is present",
+    )
+    service_availability = re.search(
+        r"if \(!Geocoder\.isPresent\(\)\) \{(?P<body>.*?)\n        \}",
+        service,
+        re.DOTALL,
+    )
+    require(
+        service_availability is not None,
+        "IntentService geocoder availability guard must remain a bounded block",
+    )
+    service_availability_body = service_availability.group("body")
+    require(
+        "errorMessage = getString(R.string.geocoder_unavailable);"
+        in service_availability_body,
+        "IntentService must use the localized geocoder unavailable message",
+    )
+    require(
+        "deliverResultToReceiver(Constants.FAILURE_RESULT, errorMessage, null);"
+        in service_availability_body,
+        "IntentService must deliver unavailable geocoder failures",
+    )
+    require(
+        "return;" in service_availability_body,
+        "IntentService must stop before geocoder construction when unavailable",
+    )
+    require(
+        service.index("if (!Geocoder.isPresent())")
+        < service.index("Geocoder geocoder = new Geocoder"),
+        "IntentService must check geocoder availability before creating the geocoder",
     )
     require(
         "if(TextUtils.isEmpty(name))" in service,

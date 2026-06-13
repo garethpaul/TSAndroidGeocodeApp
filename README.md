@@ -67,6 +67,8 @@ by checksum, and Dependabot groups weekly Gradle and Actions updates.
 - Address names are trimmed and blank names are rejected before geocoding.
 - Coordinates must be finite and inside latitude `[-90, 90]` and longitude
   `[-180, 180]` before a geocoder call.
+- Requests fail with localized feedback before service startup when Android
+  reports no geocoder backend; the service repeats the check for direct calls.
 - Direct service requests without a `ResultReceiver` are rejected.
 - Service requests read the receiver through AndroidX's typed parcelable compat
   API across the supported API 21-36 range.
@@ -87,6 +89,8 @@ by checksum, and Dependabot groups weekly Gradle and Actions updates.
   historical sample are deprecated on newer Android releases.
 - Unit tests cover pure input validation; geocoder behavior and result delivery
   across Activity recreation still require device or emulator verification.
+- Platform geocoder presence does not guarantee a result or network
+  availability; behavior still varies by device implementation.
 - The sample does not request device location, persist addresses, or include
   API keys.
 

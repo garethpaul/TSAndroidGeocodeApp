@@ -39,6 +39,12 @@ public class GeocodeAddressIntentService extends IntentService {
             Log.e(TAG, "Missing ResultReceiver");
             return;
         }
+        if (!Geocoder.isPresent()) {
+            errorMessage = getString(R.string.geocoder_unavailable);
+            Log.e(TAG, "Geocoder unavailable");
+            deliverResultToReceiver(Constants.FAILURE_RESULT, errorMessage, null);
+            return;
+        }
 
         Geocoder geocoder = new Geocoder(this, Locale.getDefault());
 
