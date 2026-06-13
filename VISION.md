@@ -24,6 +24,7 @@ Priority:
   direct IntentService requests
 - Trim and validate address-name requests before invoking geocoder services
 - Keep background geocode work consuming validated request values
+- Reject activity and direct-service requests when no platform geocoder exists
 - Reject IntentService geocode requests that cannot receive a result
 - Keep ResultReceiver extraction typed across supported Android releases
 - Guard geocode result payloads before updating the primary activity UI

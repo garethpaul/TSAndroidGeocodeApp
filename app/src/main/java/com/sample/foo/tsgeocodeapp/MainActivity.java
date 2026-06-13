@@ -4,6 +4,7 @@ import java.lang.ref.WeakReference;
 
 import android.content.Intent;
 import android.location.Address;
+import android.location.Geocoder;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -109,6 +110,11 @@ public class MainActivity extends AppCompatActivity {
                     latitude);
             intent.putExtra(Constants.LOCATION_LONGITUDE_DATA_EXTRA,
                     longitude);
+        }
+        if (!Geocoder.isPresent()) {
+            progressBar.setVisibility(View.GONE);
+            Toast.makeText(this, R.string.geocoder_unavailable, Toast.LENGTH_LONG).show();
+            return;
         }
         infoText.setVisibility(View.INVISIBLE);
         progressBar.setVisibility(View.VISIBLE);

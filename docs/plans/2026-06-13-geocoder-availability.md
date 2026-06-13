@@ -1,6 +1,6 @@
 # Geocoder Availability Guard
 
-## Status: In Progress
+## Status: Completed
 
 ## Context
 
@@ -58,6 +58,9 @@ service directly.
 
 ## Verification
 
-- Full `make check` with JDK 17 and Android SDK 36
+- `make check` passed with Temurin JDK 17.0.19 and Android SDK 36, including
+  static contracts, five JVM tests, debug APK assembly, and Android lint.
 - Static contract mutations removing, reordering, or bypassing either guard
+  were rejected.
 - XML/YAML parsing, `git diff --check`, and focused secret/artifact review
+  passed.
