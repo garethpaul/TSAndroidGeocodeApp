@@ -68,6 +68,8 @@ by checksum, and Dependabot groups weekly Gradle and Actions updates.
 - Coordinates must be finite and inside latitude `[-90, 90]` and longitude
   `[-180, 180]` before a geocoder call.
 - Direct service requests without a `ResultReceiver` are rejected.
+- Service requests read the receiver through AndroidX's typed parcelable compat
+  API across the supported API 21-36 range.
 - Missing or malformed result payloads do not crash UI rendering.
 - Background results use a main-looper receiver with a weak Activity reference,
   and results are discarded after the Activity starts finishing or is destroyed.
@@ -81,9 +83,8 @@ by checksum, and Dependabot groups weekly Gradle and Actions updates.
 
 ## Limitations
 
-- Android's `IntentService`, synchronous `Geocoder` APIs, and parcelable
-  compatibility methods used by this historical sample are deprecated on
-  newer Android releases.
+- Android's `IntentService` and synchronous `Geocoder` APIs used by this
+  historical sample are deprecated on newer Android releases.
 - Unit tests cover pure input validation; geocoder behavior and result delivery
   across Activity recreation still require device or emulator verification.
 - The sample does not request device location, persist addresses, or include
