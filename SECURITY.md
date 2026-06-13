@@ -35,6 +35,8 @@ Helpful reports include:
   finishing or destroyed Activity after asynchronous geocoder work completes.
 - Geocode requests must fail before lookup work when Android reports that no
   platform geocoder backend is present.
+- The primary action control must block duplicate in-flight geocoder dispatches
+  and restore interaction after every delivered result.
 - Review found file, document, data, or media parsing flows; changes in those areas should receive security-focused review before merge.
 - No primary dependency manifest was detected in the repository root. If dependencies are added later, include a manifest and prefer reproducible installation instructions.
 

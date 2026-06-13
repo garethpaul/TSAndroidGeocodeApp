@@ -2,6 +2,8 @@
 
 ## 2026-06-13
 
+- Disabled duplicate action-button dispatch while a geocoder request is active
+  and restored interaction for every delivered result.
 - Added activity and service guards that fail with localized feedback when
   Android reports no platform geocoder backend.
 - Replaced the deprecated untyped parcelable receiver read with AndroidX's

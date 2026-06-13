@@ -69,6 +69,8 @@ by checksum, and Dependabot groups weekly Gradle and Actions updates.
   `[-180, 180]` before a geocoder call.
 - Requests fail with localized feedback before service startup when Android
   reports no geocoder backend; the service repeats the check for direct calls.
+- The action button permits one in-flight request per Activity and is restored
+  for every delivered success or failure result.
 - Direct service requests without a `ResultReceiver` are rejected.
 - Service requests read the receiver through AndroidX's typed parcelable compat
   API across the supported API 21-36 range.

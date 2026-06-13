@@ -19,6 +19,7 @@ LIFECYCLE_RECEIVER_PLAN = DOCS_PLANS / "2026-06-10-result-receiver-lifecycle.md"
 GEOCODE_LOG_PRIVACY_PLAN = DOCS_PLANS / "2026-06-12-geocode-log-privacy.md"
 TYPED_RECEIVER_PLAN = DOCS_PLANS / "2026-06-13-typed-result-receiver-extra.md"
 GEOCODER_AVAILABILITY_PLAN = DOCS_PLANS / "2026-06-13-geocoder-availability.md"
+SINGLE_INFLIGHT_PLAN = DOCS_PLANS / "2026-06-13-single-inflight-geocode-request.md"
 
 
 def fail(message):
@@ -79,6 +80,10 @@ def check_docs_plans():
         GEOCODER_AVAILABILITY_PLAN.exists(),
         "docs/plans/2026-06-13-geocoder-availability.md is missing",
     )
+    require(
+        SINGLE_INFLIGHT_PLAN.exists(),
+        "docs/plans/2026-06-13-single-inflight-geocode-request.md is missing",
+    )
 
     plans = sorted(DOCS_PLANS.glob("*.md")) if DOCS_PLANS.exists() else []
     require(plans, "docs/plans must contain at least one completed plan")
@@ -88,6 +93,17 @@ def check_docs_plans():
         require(
             "Status: Completed" in plan and "make check" in plan,
             f"{plan_path.relative_to(ROOT)} must record completed status and make check verification",
+        )
+
+    documentation_contracts = {
+        "README.md": "one in-flight request per Activity",
+        "SECURITY.md": "block duplicate in-flight geocoder dispatches",
+        "VISION.md": "one in-flight geocoder request per Activity interaction surface",
+    }
+    for relative_path, contract in documentation_contracts.items():
+        require(
+            contract in read_text(relative_path),
+            f"{relative_path} must document the single in-flight request guard",
         )
 
 
@@ -344,6 +360,32 @@ def check_coordinate_input_guard():
     require(
         body.index("if (!Geocoder.isPresent())") < body.index("startService(intent)"),
         "MainActivity must check geocoder availability before starting the service",
+    )
+    for fragment in (
+        "Button actionButton;",
+        "actionButton = (Button) findViewById(R.id.actionButton);",
+        "actionButton.setOnClickListener(this::onButtonClicked);",
+        "actionButton.setEnabled(false);",
+        "actionButton.setEnabled(true);",
+    ):
+        require(fragment in main_activity, f"MainActivity in-flight request guard is missing: {fragment}")
+    require(
+        body.index("if (!Geocoder.isPresent())") < body.index("actionButton.setEnabled(false);"),
+        "MainActivity must leave the action button enabled when geocoding is unavailable",
+    )
+    require(
+        body.index("startService(intent)") < body.index("actionButton.setEnabled(false);"),
+        "MainActivity must disable duplicate dispatch after successful service startup",
+    )
+    show_result = re.search(
+        r"private void showResultText\(final String message\) \{(?P<body>.*?)\n    \}",
+        main_activity,
+        re.DOTALL,
+    )
+    require(show_result is not None, "MainActivity must retain the shared result renderer")
+    require(
+        "actionButton.setEnabled(true);" in show_result.group("body"),
+        "MainActivity must restore action-button interaction for every delivered result",
     )
     require(
         '<string name="invalid_latitude_longitude">' in strings,
