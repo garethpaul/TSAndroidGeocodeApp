@@ -17,6 +17,7 @@ STALE_CHECKBOX_PLAN = DOCS_PLANS / "2026-06-09-stale-checkbox-reference.md"
 HOSTED_VERIFICATION_PLAN = DOCS_PLANS / "2026-06-10-hosted-static-verification.md"
 LIFECYCLE_RECEIVER_PLAN = DOCS_PLANS / "2026-06-10-result-receiver-lifecycle.md"
 GEOCODE_LOG_PRIVACY_PLAN = DOCS_PLANS / "2026-06-12-geocode-log-privacy.md"
+TYPED_RECEIVER_PLAN = DOCS_PLANS / "2026-06-13-typed-result-receiver-extra.md"
 
 
 def fail(message):
@@ -68,6 +69,10 @@ def check_docs_plans():
     require(
         GEOCODE_LOG_PRIVACY_PLAN.exists(),
         "docs/plans/2026-06-12-geocode-log-privacy.md is missing",
+    )
+    require(
+        TYPED_RECEIVER_PLAN.exists(),
+        "docs/plans/2026-06-13-typed-result-receiver-extra.md is missing",
     )
 
     plans = sorted(DOCS_PLANS.glob("*.md")) if DOCS_PLANS.exists() else []
@@ -341,6 +346,20 @@ def check_coordinate_input_guard():
     require(
         "name = GeocodeInputValidator.normalizeAddress(name);" in service,
         "IntentService must normalize address-name extras before geocoding",
+    )
+    require(
+        "import androidx.core.content.IntentCompat;" in service,
+        "IntentService must import AndroidX IntentCompat",
+    )
+    require(
+        "IntentCompat.getParcelableExtra(" in service
+        and "Constants.RECEIVER," in service
+        and "ResultReceiver.class" in service,
+        "IntentService must read the ResultReceiver through the typed compat API",
+    )
+    require(
+        "intent.getParcelableExtra(Constants.RECEIVER)" not in service,
+        "IntentService must not restore the deprecated untyped parcelable read",
     )
     require(
         "if (resultReceiver == null)" in service,

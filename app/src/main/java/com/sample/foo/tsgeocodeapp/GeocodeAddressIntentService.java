@@ -9,6 +9,8 @@ import android.os.ResultReceiver;
 import android.text.TextUtils;
 import android.util.Log;
 
+import androidx.core.content.IntentCompat;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,7 +31,10 @@ public class GeocodeAddressIntentService extends IntentService {
         String errorMessage = "";
         List<Address> addresses = null;
 
-        resultReceiver = intent.getParcelableExtra(Constants.RECEIVER);
+        resultReceiver = IntentCompat.getParcelableExtra(
+                intent,
+                Constants.RECEIVER,
+                ResultReceiver.class);
         if (resultReceiver == null) {
             Log.e(TAG, "Missing ResultReceiver");
             return;

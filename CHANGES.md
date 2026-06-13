@@ -1,5 +1,10 @@
 # Changes
 
+## 2026-06-13
+
+- Replaced the deprecated untyped parcelable receiver read with AndroidX's
+  typed `IntentCompat` API while preserving the missing-receiver guard.
+
 ## 2026-06-12
 
 - Removed user-entered coordinates and resolved street-address lines from
