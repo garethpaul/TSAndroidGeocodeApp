@@ -1,6 +1,6 @@
 # Make Root Override Protection
 
-## Status: Planned
+## Status: Completed
 
 ## Context
 
@@ -73,12 +73,32 @@ This change does not modify application logic, request lifecycle, geocoder
 availability, typed receiver behavior, UI resources, SDK levels, dependency
 versions, Gradle configuration, workflow policy, or deployment behavior.
 
-## Verification Plan
+## Work Completed
 
-- Run focused static contracts and Make dry-run checks.
-- Exercise all aliases from two working directories under hostile root
-  assignments while preserving explicit Python and Gradle wrapper selection.
-- Reject eight focused structural and evidence mutations.
-- Run `make check` with an explicit timeout and the repository's pinned wrapper.
-- Review the exact plan-scoped diff and audit generated artifacts, changed-line
-  secrets, whitespace, and protected application/workflow/dependency paths.
+- Protected the derived repository root with GNU Make's `override` directive
+  while preserving configurable Python and Gradle wrapper selection.
+- Added declaration-count, ordering, alias, checker/Gradle-path, README, and
+  plan contracts to the canonical Android checker.
+- Indexed the completed evidence without changing Java, XML, Gradle,
+  dependency, SDK, workflow, or application behavior.
+
+## Verification Results
+
+- All six public aliases passed dry-run verification from repository and
+  external working directories under hostile environment and command-line
+  `ROOT` assignments, for 24 bounded cases; explicit `PYTHON` and `GRADLEW`
+  overrides remained effective.
+- Eight declaration protection, duplicate assignment, ordering, alias,
+  checker-path, README, missing-plan, and incomplete-plan mutations were
+  rejected.
+- The completed static gate passed seven grouped Android repository contracts
+  from the repository and an external working directory.
+- The pinned `make check` Gradle 8.14.5 gate reached Android project
+  configuration under the shared Temurin 17 toolchain, then stopped because
+  this host has no Android SDK location. Hosted Android test, assemble, and lint
+  remain the native exact-head authority; no task or assertion was skipped or
+  weakened.
+- Plan-aware correctness, build-integrity, Android, testing, maintainability,
+  reliability, and project-standards review found no actionable findings.
+- Exact diff, protected Java/XML/Gradle/workflow/dependency path,
+  generated-artifact, changed-line secret, and whitespace audits passed.

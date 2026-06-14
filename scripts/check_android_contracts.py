@@ -20,6 +20,7 @@ GEOCODE_LOG_PRIVACY_PLAN = DOCS_PLANS / "2026-06-12-geocode-log-privacy.md"
 TYPED_RECEIVER_PLAN = DOCS_PLANS / "2026-06-13-typed-result-receiver-extra.md"
 GEOCODER_AVAILABILITY_PLAN = DOCS_PLANS / "2026-06-13-geocoder-availability.md"
 SINGLE_INFLIGHT_PLAN = DOCS_PLANS / "2026-06-13-single-inflight-geocode-request.md"
+ROOT_OVERRIDE_PLAN = DOCS_PLANS / "2026-06-14-make-root-override-protection.md"
 
 
 def fail(message):
@@ -83,6 +84,10 @@ def check_docs_plans():
     require(
         SINGLE_INFLIGHT_PLAN.exists(),
         "docs/plans/2026-06-13-single-inflight-geocode-request.md is missing",
+    )
+    require(
+        ROOT_OVERRIDE_PLAN.exists(),
+        "docs/plans/2026-06-14-make-root-override-protection.md is missing",
     )
 
     plans = sorted(DOCS_PLANS.glob("*.md")) if DOCS_PLANS.exists() else []
@@ -557,6 +562,21 @@ def check_modern_android_build():
     app_build = read_text("app/build.gradle")
     wrapper = read_text("gradle/wrapper/gradle-wrapper.properties")
     makefile = read_text("Makefile")
+    root_declaration = "override ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))"
+    root_assignments = re.findall(
+        r"^(?:override\s+)?ROOT\s*[:+?]?=", makefile, re.MULTILINE
+    )
+    require(
+        len(root_assignments) == 1 and makefile.count(root_declaration) == 1,
+        "Makefile must contain exactly one protected repository-root declaration",
+    )
+    require(
+        makefile.count(
+            f"{root_declaration}\nPYTHON ?= python3\nGRADLEW ?= $(ROOT)/gradlew"
+        )
+        == 1,
+        "Makefile must keep the protected root before configurable tools",
+    )
     require('version "8.10.1"' in root_build, "Android Gradle Plugin must remain pinned")
     require("compileSdk = 36" in app_build, "compileSdk must remain on API 36")
     require("targetSdk = 36" in app_build, "targetSdk must remain on API 36")
@@ -572,12 +592,19 @@ def check_modern_android_build():
         "Gradle wrapper distribution checksum must remain pinned",
     )
     for fragment in (
-        "ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))",
+        ".PHONY: build check lint static test verify",
+        "lint: static",
+        "verify: static",
+        "check: verify",
         "GRADLEW ?= $(ROOT)/gradlew",
         '$(PYTHON) "$(ROOT)/scripts/check_android_contracts.py"',
         'cd "$(ROOT)" && "$(GRADLEW)"',
     ):
         require(fragment in makefile, f"Makefile must support invocation outside the repository: {fragment}")
+    require(
+        "docs/plans/2026-06-14-make-root-override-protection.md" in read_text("README.md"),
+        "README.md must index Make root override protection evidence",
+    )
 
 
 def main():
