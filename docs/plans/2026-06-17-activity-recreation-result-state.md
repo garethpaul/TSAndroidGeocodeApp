@@ -52,8 +52,9 @@ running, so users can start duplicate work and never see the first result.
 - **Represent rendering as an immutable state value:** One value carries
   in-flight status and an optional typed result payload so UI controls cannot
   drift across separate callbacks or recreation.
-- **Pin stable Lifecycle 2.10.0 artifacts:** This is the current stable AndroidX
-  Lifecycle release and avoids adopting the 2.11 release candidate.
+- **Pin Lifecycle 2.9.4 artifacts:** This is the newest stable line compatible
+  with the app's API 21 floor. Lifecycle 2.10.0 raises `minSdk` to API 23, so
+  adopting it requires a separate product-support decision.
 - **Do not claim process-death durability:** ViewModel retention covers
   configuration recreation within the process. Persisting or resuming an
   external service callback after process death requires a different request
@@ -91,6 +92,8 @@ sequenceDiagram
 - Replacing deprecated `IntentService` with a modern worker or repository
   abstraction.
 - Emulator-driven rotation tests and live geocoder-provider tests.
+- Raising the application floor from API 21 to API 23 so Lifecycle 2.10 or
+  newer can be adopted.
 
 ### Out of Scope
 
@@ -211,7 +214,7 @@ the exact hosted Android head is terminal green.
 - **The service can outlive the process:** ViewModel cannot solve process death.
   Documentation and tests must state this boundary rather than implying durable
   background delivery.
-- **Dependency drift can weaken reproducibility:** Pin Lifecycle 2.10.0 and add
+- **Dependency drift can weaken reproducibility:** Pin Lifecycle 2.9.4 and add
   a static contract matching the existing explicit dependency style.
 - **Local Android execution lacks JDK 17:** Run portable static/JVM checks where
   possible and require the existing hosted JDK 17 Android job before terminal
@@ -225,8 +228,9 @@ the exact hosted Android head is terminal green.
   destruction and receive the latest value after recreation.
 - Android Developers, `ResultReceiver`: a supplied Handler determines the
   callback thread.
-- AndroidX Lifecycle release notes: 2.10.0 is the current stable release as of
-  June 17, 2026; 2.11.0 remains a release candidate.
+- AndroidX Lifecycle release notes: 2.9.4 is the newest stable line compatible
+  with API 21; 2.10.0 is stable but raises the library floor to API 23, and
+  2.11.0 remains a release candidate as of June 17, 2026.
 
 ## Verification Strategy
 
