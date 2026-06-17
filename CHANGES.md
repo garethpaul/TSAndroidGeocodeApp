@@ -1,5 +1,16 @@
 # Changes
 
+## 2026-06-17
+
+- Retained one in-flight geocode request and its latest safe result across
+  Activity configuration recreation with an Activity-scoped ViewModel.
+- Moved the main-thread result receiver out of `MainActivity`; retained state
+  uses a weak ViewModel reference and never stores an Activity, View, or Context.
+- Added lifecycle-aware UI rendering and fifteen total JVM tests covering input
+  validation plus retained request success, failure, fallback, and rollback.
+- Pinned AndroidX Lifecycle 2.9.4 to preserve the API 21 device floor; Lifecycle
+  2.10 and newer require API 23.
+
 ## 2026-06-13
 
 - Disabled duplicate action-button dispatch while a geocoder request is active

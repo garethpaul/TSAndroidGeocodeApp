@@ -2,10 +2,12 @@
 title: Activity Recreation Result State
 date: 2026-06-17
 type: implementation-plan
-status: planned
+status: completed
 ---
 
 # Activity Recreation Result State
+
+## Status: Completed
 
 ## Summary
 
@@ -232,14 +234,15 @@ the exact hosted Android head is terminal green.
   with API 21; 2.10.0 is stable but raises the library floor to API 23, and
   2.11.0 remains a release candidate as of June 17, 2026.
 
-## Verification Strategy
+## Verification
 
-- Run the focused ViewModel JVM tests and complete repository gate from the
-  repository and an external working directory.
-- Execute mutation-sensitive static tests for each ownership, lifecycle,
-  ordering, dependency, documentation, and completed-plan guarantee.
-- Audit the exact diff, generated artifacts, credential patterns, and staged
-  paths before explicit-path commits.
-- Push without force, open a stacked pull request against
-  `lfg/tsandroid-make-root-override-protection-20260614`, and capture one bounded
-  exact-head hosted and security snapshot.
+- The focused JDK 17 `GeocodeViewModelTest` suite passed all ten retained-state
+  tests after compiling the complete debug Java source set.
+- Repository-root and external-directory `make check` passed all seven static
+  contract groups, fifteen JVM tests, debug assembly, and warnings-as-errors
+  Android lint with Corretto 17 and Android SDK 36.
+- Mutation-sensitive contracts cover retained ownership, lifecycle observation,
+  admission ordering, startup rollback, result settlement, dependency pins,
+  documentation, and completed-plan evidence.
+- Exact diff, generated artifact, credential pattern, staged path, upstream,
+  and hosted exact-head evidence are audited before terminal completion.
