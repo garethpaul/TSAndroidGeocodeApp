@@ -218,9 +218,9 @@ the exact hosted Android head is terminal green.
   background delivery.
 - **Dependency drift can weaken reproducibility:** Pin Lifecycle 2.9.4 and add
   a static contract matching the existing explicit dependency style.
-- **Local Android execution lacks JDK 17:** Run portable static/JVM checks where
-  possible and require the existing hosted JDK 17 Android job before terminal
-  completion.
+- **The default shell selects Java 8:** Run local Android validation with the
+  shared Temurin 17 toolchain and Android SDK explicitly selected, and require
+  the hosted JDK 17 Android job before terminal completion.
 
 ## Sources And Research
 
@@ -240,7 +240,7 @@ the exact hosted Android head is terminal green.
   tests after compiling the complete debug Java source set.
 - Repository-root and external-directory `make check` passed all seven static
   contract groups, fifteen JVM tests, debug assembly, and warnings-as-errors
-  Android lint with Corretto 17 and Android SDK 36.
+  Android lint with Temurin 17 and Android SDK 36.
 - Mutation-sensitive contracts cover retained ownership, lifecycle observation,
   admission ordering, startup rollback, result settlement, dependency pins,
   documentation, and completed-plan evidence.
