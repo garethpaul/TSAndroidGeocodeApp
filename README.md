@@ -102,6 +102,8 @@ by checksum, and Dependabot groups weekly Gradle and Actions updates.
 - `app/src/test` contains dependency-free JVM validation tests.
 - `scripts/check_android_contracts.py` enforces repository-level contracts.
 - `docs/plans` records completed maintenance changes and their validation.
+- `docs/plans/2026-06-14-make-root-override-protection.md` records repository-
+  anchored Make verification under hostile root assignments.
 - `CHANGES.md`, `SECURITY.md`, and `VISION.md` describe maintenance history,
   disclosure guidance, and project scope.
 
