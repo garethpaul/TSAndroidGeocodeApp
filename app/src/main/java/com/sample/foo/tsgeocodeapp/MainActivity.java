@@ -26,6 +26,7 @@ public class MainActivity extends AppCompatActivity {
     AddressResultReceiver mResultReceiver;
 
     EditText latitudeEdit, longitudeEdit, addressEdit;
+    Button actionButton;
     ProgressBar progressBar;
     TextView infoText;
 
@@ -45,7 +46,8 @@ public class MainActivity extends AppCompatActivity {
 
         findViewById(R.id.radioAddress).setOnClickListener(this::onRadioButtonClicked);
         findViewById(R.id.radioLocation).setOnClickListener(this::onRadioButtonClicked);
-        ((Button) findViewById(R.id.actionButton)).setOnClickListener(this::onButtonClicked);
+        actionButton = (Button) findViewById(R.id.actionButton);
+        actionButton.setOnClickListener(this::onButtonClicked);
 
         mResultReceiver = new AddressResultReceiver(this);
     }
@@ -120,6 +122,7 @@ public class MainActivity extends AppCompatActivity {
         progressBar.setVisibility(View.VISIBLE);
         Log.e(TAG, "Starting Service");
         startService(intent);
+        actionButton.setEnabled(false);
     }
 
     private boolean isCoordinateInRange(double latitude, double longitude) {
@@ -171,6 +174,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void showResultText(final String message) {
         progressBar.setVisibility(View.GONE);
+        actionButton.setEnabled(true);
         infoText.setVisibility(View.VISIBLE);
         infoText.setText(message);
     }
