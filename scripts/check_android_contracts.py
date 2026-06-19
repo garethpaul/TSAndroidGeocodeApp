@@ -16,6 +16,7 @@ ANDROID_BACKUP_PLAN = DOCS_PLANS / "2026-06-09-android-backup-opt-out.md"
 STALE_CHECKBOX_PLAN = DOCS_PLANS / "2026-06-09-stale-checkbox-reference.md"
 HOSTED_VERIFICATION_PLAN = DOCS_PLANS / "2026-06-10-hosted-static-verification.md"
 LIFECYCLE_RECEIVER_PLAN = DOCS_PLANS / "2026-06-10-result-receiver-lifecycle.md"
+GEOCODE_LOG_PRIVACY_PLAN = DOCS_PLANS / "2026-06-12-geocode-log-privacy.md"
 
 
 def fail(message):
@@ -63,6 +64,10 @@ def check_docs_plans():
     require(
         LIFECYCLE_RECEIVER_PLAN.exists(),
         "docs/plans/2026-06-10-result-receiver-lifecycle.md is missing",
+    )
+    require(
+        GEOCODE_LOG_PRIVACY_PLAN.exists(),
+        "docs/plans/2026-06-12-geocode-log-privacy.md is missing",
     )
 
     plans = sorted(DOCS_PLANS.glob("*.md")) if DOCS_PLANS.exists() else []
@@ -133,6 +138,11 @@ def check_gradle_application_id():
 
 def check_hosted_verification():
     workflow = read_text(".github/workflows/check.yml")
+    workflow_files = sorted((ROOT / ".github" / "workflows").glob("*"))
+    require(
+        workflow_files == [ROOT / ".github" / "workflows" / "check.yml"],
+        "hosted verification must contain only the reviewed check workflow",
+    )
     required_contracts = [
         "pull_request:",
         "workflow_dispatch:",
@@ -168,6 +178,31 @@ def check_hosted_verification():
         )
         == 2,
         "both hosted verification jobs must use the annotated checkout pin",
+    )
+    require(
+        workflow.count("uses: actions/checkout@") == 2
+        and workflow.count("persist-credentials: false") == 2,
+        "both checkout steps must be unique and must not persist credentials",
+    )
+    require(
+        workflow.count("uses: actions/setup-python@") == 1
+        and workflow.count("uses: actions/setup-java@") == 1,
+        "hosted verification must keep one Python setup and one Java setup step",
+    )
+    require(
+        workflow.count("permissions:") == 1
+        and "permissions:\n  contents: read" in workflow,
+        "hosted verification must keep one top-level read-only permissions block",
+    )
+    require(
+        "pull_request_target:" not in workflow
+        and "permissions: write-all" not in workflow
+        and not re.search(
+            r"^[ \t]+[A-Za-z0-9_-]+:[ \t]+write(?:[ \t]+#.*)?$",
+            workflow,
+            re.MULTILINE,
+        ),
+        "hosted verification must not use privileged triggers or write permissions",
     )
     require("@v" not in workflow, "hosted verification actions must use immutable SHAs")
 
@@ -338,9 +373,25 @@ def check_coordinate_input_guard():
         "IntentService coordinate range guard must run before geocoder lookup",
     )
     require(
-        service.count("i <= address.getMaxAddressLineIndex()") >= 2,
-        "IntentService must include the final address line in all result loops",
+        "i <= address.getMaxAddressLineIndex()" in service,
+        "IntentService must include the final address line in the delivered result",
     )
+    log_calls = re.findall(r"\bLog\.[a-z]+\s*\(.*?\);", service, re.DOTALL)
+    for log_call in log_calls:
+        for sensitive_reference in (
+            "latitude",
+            "longitude",
+            "getAddressLine",
+            "outputAddress",
+            "addressFragments",
+            "addresses.",
+            "address.toString",
+        ):
+            require(
+                sensitive_reference not in log_call,
+                "IntentService Logcat calls must not reference geocode data: "
+                f"{sensitive_reference}",
+            )
     for contract in (
         "Double.isFinite(latitude)",
         "Double.isFinite(longitude)",

@@ -56,10 +56,11 @@ network conditions.
 
 GitHub Actions runs the static contracts on Python 3.10 and 3.12 and runs the
 full Android gate on JDK 17 and Ubuntu 24.04 for pushes, pull requests, and
-manual runs. Workflow permissions are read-only and action revisions are
-pinned to immutable commits.
-The Gradle distribution is verified by checksum, and Dependabot groups weekly
-Gradle and Actions updates.
+manual runs. Workflow permissions are read-only, checkout credentials are not
+persisted, and action revisions are pinned to immutable commits. Repository
+contracts reject extra workflows, privileged pull-request triggers, write
+permissions, and duplicate action steps. The Gradle distribution is verified
+by checksum, and Dependabot groups weekly Gradle and Actions updates.
 
 ## Behavioral Contracts
 
@@ -73,6 +74,9 @@ Gradle and Actions updates.
 - Fetch requests derive their mode from the checked radio button, keeping
   restored UI state aligned with the request after Activity recreation.
 - Every address line reported by Android is included in the rendered result.
+- User-entered coordinates and resolved address lines are not copied into
+  Logcat; the service retains generic failure diagnostics only. See
+  `docs/plans/2026-06-12-geocode-log-privacy.md`.
 - App data is excluded from legacy backup, cloud backup, and device transfer.
 
 ## Limitations
