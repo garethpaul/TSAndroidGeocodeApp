@@ -217,6 +217,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # Lifecycle 2.10+ requires minSdk 23; remove after the API 21 migration.
+      - dependency-name: "androidx.lifecycle:*"
+        versions:
+          - "[2.10.0,)"
     groups:
       android-dependencies:
         patterns:
