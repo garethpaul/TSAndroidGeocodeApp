@@ -25,12 +25,13 @@ Priority:
 - Trim and validate address-name requests before invoking geocoder services
 - Keep background geocode work consuming validated request values
 - Reject activity and direct-service requests when no platform geocoder exists
-- Keep one in-flight geocoder request per Activity interaction surface
+- Retain in-flight geocode state across Activity configuration recreation
+- Keep one in-flight geocoder request per retained screen interaction surface
 - Reject IntentService geocode requests that cannot receive a result
 - Keep ResultReceiver extraction typed across supported Android releases
 - Guard geocode result payloads before updating the primary activity UI
-- Avoid retaining or updating stale activities while background geocode work
-  is in progress
+- Keep retained geocode state free of Activity, View, and Context references
+- Deliver background results only through lifecycle-aware active observers
 - Keep geocode request mode aligned with radio state restored after recreation
 - Include the final Android address line when rendering geocode results
 - Keep user-entered and resolved location data out of Logcat
@@ -42,6 +43,8 @@ Next priorities:
 
 - Replace deprecated `IntentService` and synchronous geocoder calls if the
   sample receives further lifecycle-focused development
+- Decide whether to raise the API floor from 21 to 23 before adopting AndroidX
+  Lifecycle 2.10 or newer
 - Add emulator coverage for the activity/service result flow
 - Verify behavior against multiple platform geocoder implementations
 

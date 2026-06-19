@@ -21,9 +21,11 @@ device-level test suite.
 - Gradle 8.14.5 through the checked-in wrapper
 - Android Gradle Plugin 8.10.1
 - AndroidX AppCompat 1.7.1
+- AndroidX Lifecycle 2.9.4, the newest stable line compatible with API 21
 - Android API 21 minimum and API 36 target
 
-The API 21 floor is required by the current AndroidX AppCompat release.
+Lifecycle 2.10 and newer require API 23, so this sample remains on 2.9.4 while
+it supports the AppCompat-compatible API 21 floor.
 
 ## Setup
 
@@ -47,8 +49,9 @@ network conditions.
 
 - `make static` validates source, manifest, resource, build, workflow, and
   maintenance-plan contracts.
-- `make test` runs the five JVM unit tests for address normalization and
-  coordinate boundaries, including `NaN` and infinity rejection.
+- `make test` runs fifteen JVM unit tests for address normalization, coordinate
+  boundaries, and retained request/result state, including duplicate admission,
+  completion, fallback, and startup rollback.
 - `make build` assembles the debug APK.
 - `make lint` runs static contracts and Android lint with warnings treated as
   errors.
@@ -69,14 +72,16 @@ by checksum, and Dependabot groups weekly Gradle and Actions updates.
   `[-180, 180]` before a geocoder call.
 - Requests fail with localized feedback before service startup when Android
   reports no geocoder backend; the service repeats the check for direct calls.
-- The action button permits one in-flight request per Activity and is restored
-  for every delivered success or failure result.
+- Request state is retained across Activity configuration recreation. The active
+  Activity restores progress, action availability, and the latest safe result
+  from lifecycle-aware screen state.
 - Direct service requests without a `ResultReceiver` are rejected.
 - Service requests read the receiver through AndroidX's typed parcelable compat
   API across the supported API 21-36 range.
 - Missing or malformed result payloads do not crash UI rendering.
-- Background results use a main-looper receiver with a weak Activity reference,
-  and results are discarded after the Activity starts finishing or is destroyed.
+- Background results use a main-looper receiver owned by retained screen state.
+  The receiver has no Activity reference, and lifecycle observation automatically
+  detaches destroyed Activity instances.
 - Fetch requests derive their mode from the checked radio button, keeping
   restored UI state aligned with the request after Activity recreation.
 - Every address line reported by Android is included in the rendered result.
@@ -89,8 +94,11 @@ by checksum, and Dependabot groups weekly Gradle and Actions updates.
 
 - Android's `IntentService` and synchronous `Geocoder` APIs used by this
   historical sample are deprecated on newer Android releases.
-- Unit tests cover pure input validation; geocoder behavior and result delivery
-  across Activity recreation still require device or emulator verification.
+- Unit tests cover pure input validation and retained request/result transitions;
+  live geocoder behavior and rendered rotation flow still require device or
+  emulator verification.
+- ViewModel state survives configuration recreation within the current process;
+  process death does not preserve or resume an outstanding service callback.
 - Platform geocoder presence does not guarantee a result or network
   availability; behavior still varies by device implementation.
 - The sample does not request device location, persist addresses, or include
@@ -104,6 +112,8 @@ by checksum, and Dependabot groups weekly Gradle and Actions updates.
 - `docs/plans` records completed maintenance changes and their validation.
 - `docs/plans/2026-06-14-make-root-override-protection.md` records repository-
   anchored Make verification under hostile root assignments.
+- `docs/plans/2026-06-17-activity-recreation-result-state.md` records retained
+  request/result ownership and its process-death boundary.
 - `CHANGES.md`, `SECURITY.md`, and `VISION.md` describe maintenance history,
   disclosure guidance, and project scope.
 

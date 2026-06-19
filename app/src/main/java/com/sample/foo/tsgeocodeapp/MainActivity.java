@@ -1,15 +1,8 @@
 package com.sample.foo.tsgeocodeapp;
 
-import java.lang.ref.WeakReference;
-
 import android.content.Intent;
-import android.location.Address;
 import android.location.Geocoder;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Looper;
-import android.os.ResultReceiver;
-import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
 import android.widget.EditText;
@@ -20,10 +13,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.lifecycle.ViewModelProvider;
 
 public class MainActivity extends AppCompatActivity {
 
-    AddressResultReceiver mResultReceiver;
+    GeocodeViewModel geocodeViewModel;
 
     EditText latitudeEdit, longitudeEdit, addressEdit;
     Button actionButton;
@@ -31,8 +25,6 @@ public class MainActivity extends AppCompatActivity {
     TextView infoText;
 
     private static final String TAG = "MAIN_ACTIVITY";
-    private static final String NO_GEOCODE_RESULT = "No geocode result";
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -49,7 +41,8 @@ public class MainActivity extends AppCompatActivity {
         actionButton = (Button) findViewById(R.id.actionButton);
         actionButton.setOnClickListener(this::onButtonClicked);
 
-        mResultReceiver = new AddressResultReceiver(this);
+        geocodeViewModel = new ViewModelProvider(this).get(GeocodeViewModel.class);
+        geocodeViewModel.getUiState().observe(this, this::renderUiState);
     }
 
     public void onRadioButtonClicked(View view) {
@@ -73,7 +66,6 @@ public class MainActivity extends AppCompatActivity {
                 ? Constants.USE_ADDRESS_NAME
                 : Constants.USE_ADDRESS_LOCATION;
         Intent intent = new Intent(this, GeocodeAddressIntentService.class);
-        intent.putExtra(Constants.RECEIVER, mResultReceiver);
         intent.putExtra(Constants.FETCH_TYPE_EXTRA, fetchType);
         if(fetchType == Constants.USE_ADDRESS_NAME) {
             String addressName = GeocodeInputValidator.normalizeAddress(
@@ -118,65 +110,35 @@ public class MainActivity extends AppCompatActivity {
             Toast.makeText(this, R.string.geocoder_unavailable, Toast.LENGTH_LONG).show();
             return;
         }
-        infoText.setVisibility(View.INVISIBLE);
-        progressBar.setVisibility(View.VISIBLE);
-        Log.e(TAG, "Starting Service");
-        startService(intent);
-        actionButton.setEnabled(false);
+        if (!geocodeViewModel.beginRequest()) {
+            return;
+        }
+        try {
+            intent.putExtra(Constants.RECEIVER, geocodeViewModel.getResultReceiver());
+            Log.e(TAG, "Starting Service");
+            startService(intent);
+        } catch (RuntimeException runtimeException) {
+            geocodeViewModel.cancelRequest();
+            throw runtimeException;
+        }
     }
 
     private boolean isCoordinateInRange(double latitude, double longitude) {
         return GeocodeInputValidator.isCoordinateInRange(latitude, longitude);
     }
 
-    private static final class AddressResultReceiver extends ResultReceiver {
-        private final WeakReference<MainActivity> activityReference;
+    private void renderUiState(GeocodeViewModel.UiState state) {
+        boolean requestInFlight = state.isRequestInFlight();
+        progressBar.setVisibility(requestInFlight ? View.VISIBLE : View.GONE);
+        actionButton.setEnabled(!requestInFlight);
 
-        AddressResultReceiver(MainActivity activity) {
-            super(new Handler(Looper.getMainLooper()));
-            activityReference = new WeakReference<>(activity);
+        String displayMessage = state.getDisplayMessage();
+        if (displayMessage != null) {
+            infoText.setVisibility(View.VISIBLE);
+            infoText.setText(displayMessage);
+        } else {
+            infoText.setVisibility(requestInFlight ? View.INVISIBLE : View.VISIBLE);
         }
-
-        @Override
-        protected void onReceiveResult(int resultCode, final Bundle resultData) {
-            MainActivity activity = activityReference.get();
-            if (activity == null || activity.isFinishing() || activity.isDestroyed()) {
-                return;
-            }
-
-            activity.handleGeocodeResult(resultCode, resultData);
-        }
-    }
-
-    private void handleGeocodeResult(int resultCode, Bundle resultData) {
-        if (resultData == null) {
-            showResultText(NO_GEOCODE_RESULT);
-            return;
-        }
-
-        final String resultMessage = resultData.getString(Constants.RESULT_DATA_KEY);
-        if (resultCode == Constants.SUCCESS_RESULT) {
-            final Address address = resultData.getParcelable(Constants.RESULT_ADDRESS);
-            if (address == null || TextUtils.isEmpty(resultMessage)) {
-                showResultText(NO_GEOCODE_RESULT);
-                return;
-            }
-
-            showResultText("Latitude: " + address.getLatitude() + "\n" +
-                    "Longitude: " + address.getLongitude() + "\n" +
-                    "Address: " + resultMessage);
-        }
-        else {
-            showResultText(TextUtils.isEmpty(resultMessage) ?
-                    NO_GEOCODE_RESULT : resultMessage);
-        }
-    }
-
-    private void showResultText(final String message) {
-        progressBar.setVisibility(View.GONE);
-        actionButton.setEnabled(true);
-        infoText.setVisibility(View.VISIBLE);
-        infoText.setText(message);
     }
 
 }
