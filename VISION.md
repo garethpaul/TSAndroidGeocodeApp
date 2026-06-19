@@ -25,6 +25,7 @@ Priority:
 - Trim and validate address-name requests before invoking geocoder services
 - Keep background geocode work consuming validated request values
 - Reject IntentService geocode requests that cannot receive a result
+- Keep ResultReceiver extraction typed across supported Android releases
 - Guard geocode result payloads before updating the primary activity UI
 - Avoid retaining or updating stale activities while background geocode work
   is in progress
