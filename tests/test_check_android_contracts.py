@@ -37,6 +37,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
@@ -50,6 +52,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
       - name: Set up Java
         uses: actions/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287 # v5.3.0
         with:
@@ -103,7 +107,12 @@ android {
 dependencies {
     implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
     implementation 'androidx.appcompat:appcompat:1.7.1'
+    //noinspection GradleDependency -- Lifecycle 2.10+ requires minSdk 23.
+    implementation 'androidx.lifecycle:lifecycle-livedata:2.9.4'
+    //noinspection GradleDependency -- Lifecycle 2.10+ requires minSdk 23.
+    implementation 'androidx.lifecycle:lifecycle-viewmodel:2.9.4'
 
+    testImplementation 'androidx.arch.core:core-testing:2.2.0'
     testImplementation 'junit:junit:4.13.2'
 }
 """
@@ -120,7 +129,7 @@ zipStorePath=wrapper/dists
 
 MAKEFILE = """.PHONY: build check lint static test verify
 
-ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+override ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 PYTHON ?= python3
 GRADLEW ?= $(ROOT)/gradlew
 
@@ -262,6 +271,18 @@ class CheckModernAndroidBuildContractsTest(unittest.TestCase):
                 "androidx.appcompat:appcompat:1.7.1",
                 "androidx.appcompat:appcompat:1.8.0",
             ),
+            "Lifecycle LiveData": (
+                "androidx.lifecycle:lifecycle-livedata:2.9.4",
+                "androidx.lifecycle:lifecycle-livedata:2.9.5",
+            ),
+            "Lifecycle ViewModel": (
+                "androidx.lifecycle:lifecycle-viewmodel:2.9.4",
+                "androidx.lifecycle:lifecycle-viewmodel:2.9.5",
+            ),
+            "Architecture Core Testing": (
+                "androidx.arch.core:core-testing:2.2.0",
+                "androidx.arch.core:core-testing:2.3.0",
+            ),
             "JUnit": ("junit:junit:4.13.2", "junit:junit:4.14.0"),
         }
 
@@ -272,6 +293,8 @@ class CheckModernAndroidBuildContractsTest(unittest.TestCase):
     def test_rejects_nonliteral_or_extra_dependency_lines(self):
         kotlin_line = "    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')"
         appcompat_line = "    implementation 'androidx.appcompat:appcompat:1.7.1'"
+        lifecycle_line = "    implementation 'androidx.lifecycle:lifecycle-livedata:2.9.4'"
+        core_testing_line = "    testImplementation 'androidx.arch.core:core-testing:2.2.0'"
         junit_line = "    testImplementation 'junit:junit:4.13.2'"
         mutations = {
             "dynamic Kotlin BOM": APP_BUILD.replace(
@@ -281,6 +304,14 @@ class CheckModernAndroidBuildContractsTest(unittest.TestCase):
             "nonliteral AppCompat": APP_BUILD.replace(
                 appcompat_line,
                 "    implementation \"androidx.appcompat:appcompat:${appcompatVersion}\"",
+            ),
+            "dynamic Lifecycle": APP_BUILD.replace(
+                lifecycle_line,
+                "    implementation 'androidx.lifecycle:lifecycle-livedata:+'",
+            ),
+            "nonliteral Core Testing": APP_BUILD.replace(
+                core_testing_line,
+                "    testImplementation \"androidx.arch.core:core-testing:${coreTestingVersion}\"",
             ),
             "dynamic JUnit": APP_BUILD.replace(
                 junit_line,

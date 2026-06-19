@@ -16,6 +16,12 @@ ANDROID_BACKUP_PLAN = DOCS_PLANS / "2026-06-09-android-backup-opt-out.md"
 STALE_CHECKBOX_PLAN = DOCS_PLANS / "2026-06-09-stale-checkbox-reference.md"
 HOSTED_VERIFICATION_PLAN = DOCS_PLANS / "2026-06-10-hosted-static-verification.md"
 LIFECYCLE_RECEIVER_PLAN = DOCS_PLANS / "2026-06-10-result-receiver-lifecycle.md"
+GEOCODE_LOG_PRIVACY_PLAN = DOCS_PLANS / "2026-06-12-geocode-log-privacy.md"
+TYPED_RECEIVER_PLAN = DOCS_PLANS / "2026-06-13-typed-result-receiver-extra.md"
+GEOCODER_AVAILABILITY_PLAN = DOCS_PLANS / "2026-06-13-geocoder-availability.md"
+SINGLE_INFLIGHT_PLAN = DOCS_PLANS / "2026-06-13-single-inflight-geocode-request.md"
+ROOT_OVERRIDE_PLAN = DOCS_PLANS / "2026-06-14-make-root-override-protection.md"
+RECREATION_RESULT_PLAN = DOCS_PLANS / "2026-06-17-activity-recreation-result-state.md"
 ACTION_LINE_PATTERN = re.compile(
     r"^        uses: "
     r"(?P<action>actions/(?:checkout|setup-python|setup-java))"
@@ -42,6 +48,30 @@ APP_DEPENDENCY_PATTERNS = (
             r"\d+\.\d+\.\d+'$"
         ),
         "    implementation 'androidx.appcompat:appcompat:<VERSION>'",
+    ),
+    (
+        "lifecycle-livedata",
+        re.compile(
+            r"^    implementation 'androidx\.lifecycle:lifecycle-livedata:"
+            r"\d+\.\d+\.\d+'$"
+        ),
+        "    implementation 'androidx.lifecycle:lifecycle-livedata:<VERSION>'",
+    ),
+    (
+        "lifecycle-viewmodel",
+        re.compile(
+            r"^    implementation 'androidx\.lifecycle:lifecycle-viewmodel:"
+            r"\d+\.\d+\.\d+'$"
+        ),
+        "    implementation 'androidx.lifecycle:lifecycle-viewmodel:<VERSION>'",
+    ),
+    (
+        "core-testing",
+        re.compile(
+            r"^    testImplementation 'androidx\.arch\.core:core-testing:"
+            r"\d+\.\d+\.\d+'$"
+        ),
+        "    testImplementation 'androidx.arch.core:core-testing:<VERSION>'",
     ),
     (
         "junit",
@@ -85,7 +115,12 @@ android {
 dependencies {
     implementation platform('org.jetbrains.kotlin:kotlin-bom:<VERSION>')
     implementation 'androidx.appcompat:appcompat:<VERSION>'
+    //noinspection GradleDependency -- Lifecycle 2.10+ requires minSdk 23.
+    implementation 'androidx.lifecycle:lifecycle-livedata:<VERSION>'
+    //noinspection GradleDependency -- Lifecycle 2.10+ requires minSdk 23.
+    implementation 'androidx.lifecycle:lifecycle-viewmodel:<VERSION>'
 
+    testImplementation 'androidx.arch.core:core-testing:<VERSION>'
     testImplementation 'junit:junit:<VERSION>'
 }"""
 GRADLE_WRAPPER_PATTERN = re.compile(
@@ -126,6 +161,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@<SHA> # v<VERSION>
+        with:
+          persist-credentials: false
       - name: Set up Python
         uses: actions/setup-python@<SHA> # v<VERSION>
         with:
@@ -139,6 +176,8 @@ jobs:
     steps:
       - name: Check out repository
         uses: actions/checkout@<SHA> # v<VERSION>
+        with:
+          persist-credentials: false
       - name: Set up Java
         uses: actions/setup-java@<SHA> # v<VERSION>
         with:
@@ -151,7 +190,7 @@ jobs:
         run: make check"""
 CANONICAL_MAKEFILE = """.PHONY: build check lint static test verify
 
-ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+override ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 PYTHON ?= python3
 GRADLEW ?= $(ROOT)/gradlew
 
@@ -244,6 +283,30 @@ def check_docs_plans():
         LIFECYCLE_RECEIVER_PLAN.exists(),
         "docs/plans/2026-06-10-result-receiver-lifecycle.md is missing",
     )
+    require(
+        GEOCODE_LOG_PRIVACY_PLAN.exists(),
+        "docs/plans/2026-06-12-geocode-log-privacy.md is missing",
+    )
+    require(
+        TYPED_RECEIVER_PLAN.exists(),
+        "docs/plans/2026-06-13-typed-result-receiver-extra.md is missing",
+    )
+    require(
+        GEOCODER_AVAILABILITY_PLAN.exists(),
+        "docs/plans/2026-06-13-geocoder-availability.md is missing",
+    )
+    require(
+        SINGLE_INFLIGHT_PLAN.exists(),
+        "docs/plans/2026-06-13-single-inflight-geocode-request.md is missing",
+    )
+    require(
+        ROOT_OVERRIDE_PLAN.exists(),
+        "docs/plans/2026-06-14-make-root-override-protection.md is missing",
+    )
+    require(
+        RECREATION_RESULT_PLAN.exists(),
+        "docs/plans/2026-06-17-activity-recreation-result-state.md is missing",
+    )
 
     plans = sorted(DOCS_PLANS.glob("*.md")) if DOCS_PLANS.exists() else []
     require(plans, "docs/plans must contain at least one completed plan")
@@ -253,6 +316,17 @@ def check_docs_plans():
         require(
             "Status: Completed" in plan and "make check" in plan,
             f"{plan_path.relative_to(ROOT)} must record completed status and make check verification",
+        )
+
+    documentation_contracts = {
+        "README.md": "retained across Activity configuration recreation",
+        "SECURITY.md": "retained screen state never stores an Activity, View, or Context",
+        "VISION.md": "Retain in-flight geocode state across Activity configuration recreation",
+    }
+    for relative_path, contract in documentation_contracts.items():
+        require(
+            contract in read_text(relative_path),
+            f"{relative_path} must document recreation-safe result ownership",
         )
 
 
@@ -341,14 +415,21 @@ def check_hosted_verification_text(workflow):
 
 
 def check_hosted_verification():
+    workflow_files = sorted((ROOT / ".github" / "workflows").glob("*"))
+    require(
+        workflow_files == [ROOT / ".github" / "workflows" / "check.yml"],
+        "hosted verification must contain only the reviewed check workflow",
+    )
     check_hosted_verification_text(read_text(".github/workflows/check.yml"))
 
 
 def check_coordinate_input_guard():
     main_activity = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/MainActivity.java")
+    view_model = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/GeocodeViewModel.java")
     service = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/GeocodeAddressIntentService.java")
     validator = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/GeocodeInputValidator.java")
     validator_test = read_text("app/src/test/java/com/sample/foo/tsgeocodeapp/GeocodeInputValidatorTest.java")
+    view_model_test = read_text("app/src/test/java/com/sample/foo/tsgeocodeapp/GeocodeViewModelTest.java")
     strings = read_text("app/src/main/res/values/strings.xml")
 
     require(
@@ -435,49 +516,160 @@ def check_coordinate_input_guard():
         "coordinate range guard must run before starting the service",
     )
     require(
+        "import android.location.Geocoder;" in main_activity,
+        "MainActivity must import the platform Geocoder availability API",
+    )
+    require(
+        "if (!Geocoder.isPresent())" in body,
+        "MainActivity must reject requests when no geocoder backend is present",
+    )
+    activity_availability = re.search(
+        r"if \(!Geocoder\.isPresent\(\)\) \{(?P<body>.*?)\n        \}",
+        body,
+        re.DOTALL,
+    )
+    require(
+        activity_availability is not None,
+        "MainActivity geocoder availability guard must remain a bounded block",
+    )
+    activity_availability_body = activity_availability.group("body")
+    require(
+        "progressBar.setVisibility(View.GONE);" in activity_availability_body,
+        "MainActivity must leave progress hidden when geocoding is unavailable",
+    )
+    require(
+        "R.string.geocoder_unavailable" in activity_availability_body,
+        "MainActivity must show the localized geocoder unavailable message",
+    )
+    require(
+        "return;" in activity_availability_body,
+        "MainActivity must stop before service startup when geocoding is unavailable",
+    )
+    require(
+        "geocodeViewModel.beginRequest()" in body,
+        "MainActivity must ask retained state to admit the request",
+    )
+    require(
+        body.index("if (!Geocoder.isPresent())") < body.index("geocodeViewModel.beginRequest()"),
+        "MainActivity must check geocoder availability before retaining in-flight state",
+    )
+    require(
+        body.index("if (!Geocoder.isPresent())") < body.index("startService(intent)"),
+        "MainActivity must check geocoder availability before starting the service",
+    )
+    for fragment in (
+        "Button actionButton;",
+        "actionButton = (Button) findViewById(R.id.actionButton);",
+        "actionButton.setOnClickListener(this::onButtonClicked);",
+        "GeocodeViewModel geocodeViewModel;",
+        "new ViewModelProvider(this).get(GeocodeViewModel.class)",
+        "geocodeViewModel.getUiState().observe(this, this::renderUiState);",
+        "if (!geocodeViewModel.beginRequest())",
+        "intent.putExtra(Constants.RECEIVER, geocodeViewModel.getResultReceiver());",
+        "geocodeViewModel.cancelRequest();",
+    ):
+        require(fragment in main_activity, f"MainActivity retained request guard is missing: {fragment}")
+    require(
+        body.index("geocodeViewModel.beginRequest()")
+        < body.index("intent.putExtra(Constants.RECEIVER, geocodeViewModel.getResultReceiver())")
+        < body.index("startService(intent)"),
+        "MainActivity must retain request state before service startup",
+    )
+    render_state = re.search(
+        r"private void renderUiState\(GeocodeViewModel\.UiState state\) \{(?P<body>.*?)\n    \}",
+        main_activity,
+        re.DOTALL,
+    )
+    require(render_state is not None, "MainActivity must render retained ViewModel state")
+    for fragment in (
+        "progressBar.setVisibility(requestInFlight ? View.VISIBLE : View.GONE);",
+        "actionButton.setEnabled(!requestInFlight);",
+        "String displayMessage = state.getDisplayMessage();",
+        "infoText.setText(displayMessage);",
+    ):
+        require(
+            fragment in render_state.group("body"),
+            f"MainActivity retained state renderer is missing: {fragment}",
+        )
+    require(
+        "AddressResultReceiver" not in main_activity
+        and "WeakReference<MainActivity>" not in main_activity
+        and "handleGeocodeResult" not in main_activity,
+        "MainActivity must not own or interpret the retained service receiver",
+    )
+    require(
         '<string name="invalid_latitude_longitude">' in strings,
         "strings.xml must define invalid_latitude_longitude",
     )
+    require(
+        '<string name="geocoder_unavailable">' in strings,
+        "strings.xml must define geocoder_unavailable",
+    )
     for fragment in (
-        "import android.text.TextUtils;",
-        'private static final String NO_GEOCODE_RESULT = "No geocode result";',
+        "public final class GeocodeViewModel extends ViewModel",
+        'static final String NO_GEOCODE_RESULT = "No geocode result";',
+        "private final MutableLiveData<UiState> uiState",
+        "boolean beginRequest()",
+        "void cancelRequest()",
+        "void completeResult(int resultCode, Double latitude, Double longitude, String message)",
+        "private void completeSuccess(double latitude, double longitude, String addressText)",
+        "private void completeFailure(String message)",
+        "uiState.setValue(state);",
         "if (resultData == null)",
-        "final String resultMessage = resultData.getString(Constants.RESULT_DATA_KEY);",
-        "address == null || TextUtils.isEmpty(resultMessage)",
-        "showResultText(NO_GEOCODE_RESULT)",
-        "private void showResultText(final String message)",
-    ):
-        require(fragment in main_activity, f"MainActivity result receiver guard is missing: {fragment}")
-    require(
-        "infoText.setText(resultData.getString(Constants.RESULT_DATA_KEY))" not in main_activity,
-        "MainActivity must not render raw ResultReceiver bundle strings directly",
-    )
-    for fragment in (
-        "import java.lang.ref.WeakReference;",
-        "import android.os.Looper;",
-        "mResultReceiver = new AddressResultReceiver(this);",
+        "String resultMessage = resultData.getString(Constants.RESULT_DATA_KEY);",
+        "BundleCompat.getParcelable(",
+        "address == null ? null : address.getLatitude()",
+        "completeResult(resultCode, null, null, resultMessage);",
         "private static final class AddressResultReceiver extends ResultReceiver",
-        "private final WeakReference<MainActivity> activityReference;",
+        "private final WeakReference<GeocodeViewModel> viewModelReference;",
         "super(new Handler(Looper.getMainLooper()));",
-        "activityReference = new WeakReference<>(activity);",
-        "MainActivity activity = activityReference.get();",
-        "activity == null || activity.isFinishing() || activity.isDestroyed()",
-        "activity.handleGeocodeResult(resultCode, resultData);",
-        "private void handleGeocodeResult(int resultCode, Bundle resultData)",
+        "viewModel.handleGeocodeResult(resultCode, resultData);",
     ):
-        require(fragment in main_activity, f"MainActivity lifecycle-safe receiver is missing: {fragment}")
+        require(fragment in view_model, f"GeocodeViewModel result-state guard is missing: {fragment}")
     require(
-        "mResultReceiver = new AddressResultReceiver(null);" not in main_activity,
-        "MainActivity must bind the receiver through a weak activity reference",
+        all(forbidden not in view_model for forbidden in (
+            "MainActivity",
+            "android.app.Activity",
+            "android.view.View",
+            "android.content.Context",
+        )),
+        "retained GeocodeViewModel state must not store Activity, View, or Context references",
     )
     require(
-        "runOnUiThread" not in main_activity,
+        "runOnUiThread" not in main_activity and "runOnUiThread" not in view_model,
         "ResultReceiver must dispatch directly through its main-looper Handler",
     )
+    for test_name in (
+        "initialStateIsIdleWithoutAResult",
+        "onlyOneRequestCanBeInFlight",
+        "successSettlesTheRequestAndFormatsTheAddress",
+        "failureSettlesTheRequestWithItsMessage",
+        "missingResultsUseTheSafeFallbackAndSettleTheRequest",
+        "successWithoutAnAddressUsesTheSafeFallback",
+        "emptyFailureMessageUsesTheSafeFallback",
+        "cancelledStartupRestoresIdleStateWithoutInventingAResult",
+        "liveDataPublishesEachRetainedStateTransition",
+        "retainedStateOwnsNoUiObjectFields",
+    ):
+        require(test_name in view_model_test, f"ViewModel unit test is missing {test_name}")
 
     require(
         "name = GeocodeInputValidator.normalizeAddress(name);" in service,
         "IntentService must normalize address-name extras before geocoding",
+    )
+    require(
+        "import androidx.core.content.IntentCompat;" in service,
+        "IntentService must import AndroidX IntentCompat",
+    )
+    require(
+        "IntentCompat.getParcelableExtra(" in service
+        and "Constants.RECEIVER," in service
+        and "ResultReceiver.class" in service,
+        "IntentService must read the ResultReceiver through the typed compat API",
+    )
+    require(
+        "intent.getParcelableExtra(Constants.RECEIVER)" not in service,
+        "IntentService must not restore the deprecated untyped parcelable read",
     )
     require(
         "if (resultReceiver == null)" in service,
@@ -487,6 +679,39 @@ def check_coordinate_input_guard():
         service.index("if (resultReceiver == null)")
         < service.index("Geocoder geocoder = new Geocoder"),
         "IntentService must validate ResultReceiver before creating the geocoder",
+    )
+    require(
+        "if (!Geocoder.isPresent())" in service,
+        "IntentService must reject requests when no geocoder backend is present",
+    )
+    service_availability = re.search(
+        r"if \(!Geocoder\.isPresent\(\)\) \{(?P<body>.*?)\n        \}",
+        service,
+        re.DOTALL,
+    )
+    require(
+        service_availability is not None,
+        "IntentService geocoder availability guard must remain a bounded block",
+    )
+    service_availability_body = service_availability.group("body")
+    require(
+        "errorMessage = getString(R.string.geocoder_unavailable);"
+        in service_availability_body,
+        "IntentService must use the localized geocoder unavailable message",
+    )
+    require(
+        "deliverResultToReceiver(Constants.FAILURE_RESULT, errorMessage, null);"
+        in service_availability_body,
+        "IntentService must deliver unavailable geocoder failures",
+    )
+    require(
+        "return;" in service_availability_body,
+        "IntentService must stop before geocoder construction when unavailable",
+    )
+    require(
+        service.index("if (!Geocoder.isPresent())")
+        < service.index("Geocoder geocoder = new Geocoder"),
+        "IntentService must check geocoder availability before creating the geocoder",
     )
     require(
         "if(TextUtils.isEmpty(name))" in service,
@@ -510,9 +735,25 @@ def check_coordinate_input_guard():
         "IntentService coordinate range guard must run before geocoder lookup",
     )
     require(
-        service.count("i <= address.getMaxAddressLineIndex()") >= 2,
-        "IntentService must include the final address line in all result loops",
+        "i <= address.getMaxAddressLineIndex()" in service,
+        "IntentService must include the final address line in the delivered result",
     )
+    log_calls = re.findall(r"\bLog\.[a-z]+\s*\(.*?\);", service, re.DOTALL)
+    for log_call in log_calls:
+        for sensitive_reference in (
+            "latitude",
+            "longitude",
+            "getAddressLine",
+            "outputAddress",
+            "addressFragments",
+            "addresses.",
+            "address.toString",
+        ):
+            require(
+                sensitive_reference not in log_call,
+                "IntentService Logcat calls must not reference geocode data: "
+                f"{sensitive_reference}",
+            )
     for contract in (
         "Double.isFinite(latitude)",
         "Double.isFinite(longitude)",
@@ -556,7 +797,15 @@ def check_modern_android_build_text(root_build, app_build, wrapper, makefile):
 
     normalized_app_build = "\n".join(normalized_app_build_lines)
     require(
-        dependencies == ["kotlin-bom", "appcompat", "junit"]
+        dependencies
+        == [
+            "kotlin-bom",
+            "appcompat",
+            "lifecycle-livedata",
+            "lifecycle-viewmodel",
+            "core-testing",
+            "junit",
+        ]
         and normalized_app_build == CANONICAL_APP_BUILD,
         "app/build.gradle must match the canonical Android application build",
     )
@@ -576,6 +825,11 @@ def check_modern_android_build():
         read_text("app/build.gradle"),
         read_text("gradle/wrapper/gradle-wrapper.properties"),
         read_text("Makefile"),
+    )
+    require(
+        "docs/plans/2026-06-14-make-root-override-protection.md"
+        in read_text("README.md"),
+        "README.md must index Make root override protection evidence",
     )
 
 

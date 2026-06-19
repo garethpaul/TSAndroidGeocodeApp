@@ -21,9 +21,11 @@ device-level test suite.
 - Gradle 8.14.5 through the checked-in wrapper
 - Android Gradle Plugin 8.10.1
 - AndroidX AppCompat 1.7.1
+- AndroidX Lifecycle 2.9.4, the newest stable line compatible with API 21
 - Android API 21 minimum and API 36 target
 
-The API 21 floor is required by the current AndroidX AppCompat release.
+Lifecycle 2.10 and newer require API 23, so this sample remains on 2.9.4 while
+it supports the AppCompat-compatible API 21 floor.
 
 ## Setup
 
@@ -47,8 +49,9 @@ network conditions.
 
 - `make static` validates source, manifest, resource, build, workflow, and
   maintenance-plan contracts.
-- `make test` runs the five JVM unit tests for address normalization and
-  coordinate boundaries, including `NaN` and infinity rejection.
+- `make test` runs fifteen JVM unit tests for address normalization, coordinate
+  boundaries, and retained request/result state, including duplicate admission,
+  completion, fallback, and startup rollback.
 - `make build` assembles the debug APK.
 - `make lint` runs static contracts and Android lint with warnings treated as
   errors.
@@ -56,32 +59,48 @@ network conditions.
 
 GitHub Actions runs the static contracts on Python 3.10 and 3.12 and runs the
 full Android gate on JDK 17 and Ubuntu 24.04 for pushes, pull requests, and
-manual runs. Workflow permissions are read-only and action revisions are
-pinned to immutable commits.
-The Gradle distribution is verified by checksum, and Dependabot groups weekly
-Gradle and Actions updates.
+manual runs. Workflow permissions are read-only, checkout credentials are not
+persisted, and action revisions are pinned to immutable commits. Repository
+contracts reject extra workflows, privileged pull-request triggers, write
+permissions, and duplicate action steps. The Gradle distribution is verified
+by checksum, and Dependabot groups weekly Gradle and Actions updates.
 
 ## Behavioral Contracts
 
 - Address names are trimmed and blank names are rejected before geocoding.
 - Coordinates must be finite and inside latitude `[-90, 90]` and longitude
   `[-180, 180]` before a geocoder call.
+- Requests fail with localized feedback before service startup when Android
+  reports no geocoder backend; the service repeats the check for direct calls.
+- Request state is retained across Activity configuration recreation. The active
+  Activity restores progress, action availability, and the latest safe result
+  from lifecycle-aware screen state.
 - Direct service requests without a `ResultReceiver` are rejected.
+- Service requests read the receiver through AndroidX's typed parcelable compat
+  API across the supported API 21-36 range.
 - Missing or malformed result payloads do not crash UI rendering.
-- Background results use a main-looper receiver with a weak Activity reference,
-  and results are discarded after the Activity starts finishing or is destroyed.
+- Background results use a main-looper receiver owned by retained screen state.
+  The receiver has no Activity reference, and lifecycle observation automatically
+  detaches destroyed Activity instances.
 - Fetch requests derive their mode from the checked radio button, keeping
   restored UI state aligned with the request after Activity recreation.
 - Every address line reported by Android is included in the rendered result.
+- User-entered coordinates and resolved address lines are not copied into
+  Logcat; the service retains generic failure diagnostics only. See
+  `docs/plans/2026-06-12-geocode-log-privacy.md`.
 - App data is excluded from legacy backup, cloud backup, and device transfer.
 
 ## Limitations
 
-- Android's `IntentService`, synchronous `Geocoder` APIs, and parcelable
-  compatibility methods used by this historical sample are deprecated on
-  newer Android releases.
-- Unit tests cover pure input validation; geocoder behavior and result delivery
-  across Activity recreation still require device or emulator verification.
+- Android's `IntentService` and synchronous `Geocoder` APIs used by this
+  historical sample are deprecated on newer Android releases.
+- Unit tests cover pure input validation and retained request/result transitions;
+  live geocoder behavior and rendered rotation flow still require device or
+  emulator verification.
+- ViewModel state survives configuration recreation within the current process;
+  process death does not preserve or resume an outstanding service callback.
+- Platform geocoder presence does not guarantee a result or network
+  availability; behavior still varies by device implementation.
 - The sample does not request device location, persist addresses, or include
   API keys.
 
@@ -91,6 +110,10 @@ Gradle and Actions updates.
 - `app/src/test` contains dependency-free JVM validation tests.
 - `scripts/check_android_contracts.py` enforces repository-level contracts.
 - `docs/plans` records completed maintenance changes and their validation.
+- `docs/plans/2026-06-14-make-root-override-protection.md` records repository-
+  anchored Make verification under hostile root assignments.
+- `docs/plans/2026-06-17-activity-recreation-result-state.md` records retained
+  request/result ownership and its process-death boundary.
 - `CHANGES.md`, `SECURITY.md`, and `VISION.md` describe maintenance history,
   disclosure guidance, and project scope.
 

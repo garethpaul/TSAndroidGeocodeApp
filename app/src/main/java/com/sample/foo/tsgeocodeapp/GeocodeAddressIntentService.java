@@ -9,6 +9,8 @@ import android.os.ResultReceiver;
 import android.text.TextUtils;
 import android.util.Log;
 
+import androidx.core.content.IntentCompat;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -29,9 +31,18 @@ public class GeocodeAddressIntentService extends IntentService {
         String errorMessage = "";
         List<Address> addresses = null;
 
-        resultReceiver = intent.getParcelableExtra(Constants.RECEIVER);
+        resultReceiver = IntentCompat.getParcelableExtra(
+                intent,
+                Constants.RECEIVER,
+                ResultReceiver.class);
         if (resultReceiver == null) {
             Log.e(TAG, "Missing ResultReceiver");
+            return;
+        }
+        if (!Geocoder.isPresent()) {
+            errorMessage = getString(R.string.geocoder_unavailable);
+            Log.e(TAG, "Geocoder unavailable");
+            deliverResultToReceiver(Constants.FAILURE_RESULT, errorMessage, null);
             return;
         }
 
@@ -61,9 +72,7 @@ public class GeocodeAddressIntentService extends IntentService {
 
             if(!isCoordinateInRange(latitude, longitude)) {
                 errorMessage = "Invalid Latitude or Longitude Used";
-                Log.e(TAG, errorMessage + ". " +
-                        "Latitude = " + latitude + ", Longitude = " +
-                        longitude);
+                Log.e(TAG, errorMessage);
             } else {
                 try {
                     addresses = geocoder.getFromLocation(latitude, longitude, 1);
@@ -72,9 +81,7 @@ public class GeocodeAddressIntentService extends IntentService {
                     Log.e(TAG, errorMessage, ioException);
                 } catch (IllegalArgumentException illegalArgumentException) {
                     errorMessage = "Invalid Latitude or Longitude Used";
-                    Log.e(TAG, errorMessage + ". " +
-                            "Latitude = " + latitude + ", Longitude = " +
-                            longitude, illegalArgumentException);
+                    Log.e(TAG, errorMessage, illegalArgumentException);
                 }
             }
         }
@@ -90,13 +97,6 @@ public class GeocodeAddressIntentService extends IntentService {
             }
             deliverResultToReceiver(Constants.FAILURE_RESULT, errorMessage, null);
         } else {
-            for(Address address : addresses) {
-                String outputAddress = "";
-                for(int i = 0; i <= address.getMaxAddressLineIndex(); i++) {
-                    outputAddress += " --- " + address.getAddressLine(i);
-                }
-                Log.e(TAG, outputAddress);
-            }
             Address address = addresses.get(0);
             ArrayList<String> addressFragments = new ArrayList<>();
 

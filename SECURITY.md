@@ -27,9 +27,18 @@ Helpful reports include:
 - This repository appears to be an Android mobile application or sample. The active security scope is the code and documentation on the default branch.
 - Review found network clients, sockets, web APIs, or service endpoints; changes in those areas should receive security-focused review before merge.
 - Review found mobile permission or privacy-sensitive data handling; changes in those areas should receive security-focused review before merge.
+- User-entered coordinates and resolved street-address lines must remain out of
+  Logcat; generic validation and service diagnostics may be logged without the
+  location values.
 - Android app-data backup should stay disabled by default for this sample.
-- Background result receivers must not strongly retain an Activity or update a
-  finishing or destroyed Activity after asynchronous geocoder work completes.
+- Background result receivers are owned by lifecycle-retained screen state.
+  The retained screen state never stores an Activity, View, or Context, and
+  destroyed Activity observers are detached automatically.
+- Geocode requests must fail before lookup work when Android reports that no
+  platform geocoder backend is present.
+- The primary action control must block duplicate in-flight geocoder dispatches
+  across Activity configuration recreation and restore interaction after every
+  delivered result.
 - Review found file, document, data, or media parsing flows; changes in those areas should receive security-focused review before merge.
 - No primary dependency manifest was detected in the repository root. If dependencies are added later, include a manifest and prefer reproducible installation instructions.
 
