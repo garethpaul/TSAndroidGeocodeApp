@@ -5,6 +5,7 @@ PYTHON ?= python3
 GRADLEW ?= $(ROOT)/gradlew
 
 static:
+	cd "$(ROOT)" && PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest tests.test_check_android_contracts -v
 	$(PYTHON) "$(ROOT)/scripts/check_android_contracts.py"
 
 test:
