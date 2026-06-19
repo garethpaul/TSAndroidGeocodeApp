@@ -1,0 +1,488 @@
+import io
+import os
+import subprocess
+import tempfile
+import unittest
+from contextlib import redirect_stderr
+from pathlib import Path
+from unittest.mock import patch
+
+import scripts.check_android_contracts as contracts
+
+
+VALID_WORKFLOW = """name: Check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run repository verification
+        run: make static
+
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
+        with:
+          persist-credentials: false
+      - name: Set up Java
+        uses: actions/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287 # v5.3.0
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - name: Install Android SDK packages
+        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;35.0.0"
+      - name: Run Android verification
+        run: make check
+"""
+
+ROOT_BUILD_WITH_UPDATED_AGP = """plugins {
+    id "com.android.application" version "8.11.0" apply false
+}
+"""
+
+APP_BUILD = """plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace = 'com.sample.foo.tsgeocodeapp'
+    compileSdk = 36
+
+    defaultConfig {
+        applicationId = 'com.sample.foo.tsgeocodeapp'
+        minSdk = 21
+        targetSdk = 36
+        versionCode = 1
+        versionName = '1.0'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled = false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    lint {
+        warningsAsErrors = true
+    }
+}
+
+dependencies {
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
+    implementation 'androidx.appcompat:appcompat:1.7.1'
+    //noinspection GradleDependency -- Lifecycle 2.10+ requires minSdk 23.
+    implementation 'androidx.lifecycle:lifecycle-livedata:2.9.4'
+    //noinspection GradleDependency -- Lifecycle 2.10+ requires minSdk 23.
+    implementation 'androidx.lifecycle:lifecycle-viewmodel:2.9.4'
+
+    testImplementation 'androidx.arch.core:core-testing:2.2.0'
+    testImplementation 'junit:junit:4.13.2'
+}
+"""
+
+WRAPPER_WITH_UPDATED_GRADLE = """distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionSha256Sum=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+distributionUrl=https\\://services.gradle.org/distributions/gradle-8.15.0-bin.zip
+networkTimeout=10000
+validateDistributionUrl=true
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+"""
+
+MAKEFILE = """.PHONY: build check lint static test verify
+
+override ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+PYTHON ?= python3
+GRADLEW ?= $(ROOT)/gradlew
+
+static:
+\tcd "$(ROOT)" && PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest tests.test_check_android_contracts -v
+\t$(PYTHON) "$(ROOT)/scripts/check_android_contracts.py"
+
+test:
+\tcd "$(ROOT)" && "$(GRADLEW)" --no-daemon testDebugUnitTest
+
+build:
+\tcd "$(ROOT)" && "$(GRADLEW)" --no-daemon assembleDebug
+
+lint: static
+\tcd "$(ROOT)" && "$(GRADLEW)" --no-daemon lintDebug
+
+verify: static
+\tcd "$(ROOT)" && "$(GRADLEW)" --no-daemon testDebugUnitTest assembleDebug lintDebug
+
+check: verify
+"""
+
+VALID_DEPENDABOT = """version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      android-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+"""
+
+
+class CheckHostedVerificationContractsTest(unittest.TestCase):
+    def test_accepts_updated_immutable_action_sha_with_semver_annotation(self):
+        contracts.check_hosted_verification_text(VALID_WORKFLOW)
+
+    def test_rejects_noncanonical_workflow_content(self):
+        setup_java = "actions/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287 # v5.3.0"
+        mutations = {
+            "floating tag": VALID_WORKFLOW.replace(setup_java, "actions/setup-java@v5.3.0 # v5.3.0"),
+            "short sha": VALID_WORKFLOW.replace(setup_java, "actions/setup-java@ad2b38190b15 # v5.3.0"),
+            "missing annotation": VALID_WORKFLOW.replace(
+                setup_java, "actions/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287"
+            ),
+            "comment uses": VALID_WORKFLOW + "        # uses: attacker/setup-java@v1\n",
+            "attacker action": VALID_WORKFLOW
+            + "        uses: attacker/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287 # v5.3.0\n",
+            "quoted key": VALID_WORKFLOW
+            + '        "uses": attacker/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287\n',
+            "flow map": VALID_WORKFLOW
+            + "      - { uses: attacker/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287 }\n",
+            "unicode key": VALID_WORKFLOW
+            + '        "\\u0075ses": attacker/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287\n',
+            "extra key": VALID_WORKFLOW + "unexpected: true\n",
+        }
+
+        for name, workflow in mutations.items():
+            with self.subTest(name=name), self.assertRaises(AssertionError):
+                contracts.check_hosted_verification_text(workflow)
+
+
+class CheckModernAndroidBuildContractsTest(unittest.TestCase):
+    def check_build_text(
+        self,
+        root_build=ROOT_BUILD_WITH_UPDATED_AGP,
+        app_build=APP_BUILD,
+        wrapper=WRAPPER_WITH_UPDATED_GRADLE,
+        makefile=MAKEFILE,
+    ):
+        contracts.check_modern_android_build_text(root_build, app_build, wrapper, makefile)
+
+    def test_accepts_updated_literal_toolchain_versions_and_wrapper_checksum(self):
+        self.check_build_text()
+
+    def test_rejects_noncanonical_root_build_content(self):
+        mutations = {
+            "dynamic version": ROOT_BUILD_WITH_UPDATED_AGP.replace('version "8.11.0"', 'version "+"'),
+            "comment": ROOT_BUILD_WITH_UPDATED_AGP.replace("}", "    // unexpected\n}"),
+            "duplicate": ROOT_BUILD_WITH_UPDATED_AGP.replace(
+                "}", '    id "com.android.application" version "8.12.0" apply false\n}'
+            ),
+            "unicode declaration": ROOT_BUILD_WITH_UPDATED_AGP
+            + 'id "com.android.applicat\\u0069on" version "+" apply false\n',
+            "extra content": ROOT_BUILD_WITH_UPDATED_AGP + "unexpected\n",
+        }
+
+        for name, root_build in mutations.items():
+            with self.subTest(name=name), self.assertRaises(AssertionError):
+                self.check_build_text(root_build=root_build)
+
+    def test_rejects_app_build_comment_decoys_and_later_overrides(self):
+        mutations = {}
+        for setting, valid_value, invalid_value in (
+            ("compileSdk", "36", "35"),
+            ("targetSdk", "36", "35"),
+            ("minSdk", "21", "19"),
+            ("warningsAsErrors", "true", "false"),
+        ):
+            canonical_line = f"        {setting} = {valid_value}"
+            if setting == "compileSdk":
+                canonical_line = f"    {setting} = {valid_value}"
+            mutations[f"{setting} comment decoy"] = APP_BUILD.replace(
+                canonical_line,
+                f"        // {setting} = {invalid_value}\n{canonical_line}",
+            )
+            mutations[f"{setting} later override"] = APP_BUILD.replace(
+                canonical_line,
+                f"{canonical_line}\n        {setting} = {invalid_value}",
+            )
+
+        for name, app_build in mutations.items():
+            with self.subTest(name=name), self.assertRaises(AssertionError):
+                self.check_build_text(app_build=app_build)
+
+    def test_accepts_updated_literal_dependency_versions(self):
+        updates = {
+            "Kotlin BOM": (
+                "org.jetbrains.kotlin:kotlin-bom:1.8.22",
+                "org.jetbrains.kotlin:kotlin-bom:2.1.0",
+            ),
+            "AppCompat": (
+                "androidx.appcompat:appcompat:1.7.1",
+                "androidx.appcompat:appcompat:1.8.0",
+            ),
+            "Lifecycle LiveData": (
+                "androidx.lifecycle:lifecycle-livedata:2.9.4",
+                "androidx.lifecycle:lifecycle-livedata:2.9.5",
+            ),
+            "Lifecycle ViewModel": (
+                "androidx.lifecycle:lifecycle-viewmodel:2.9.4",
+                "androidx.lifecycle:lifecycle-viewmodel:2.9.5",
+            ),
+            "Architecture Core Testing": (
+                "androidx.arch.core:core-testing:2.2.0",
+                "androidx.arch.core:core-testing:2.3.0",
+            ),
+            "JUnit": ("junit:junit:4.13.2", "junit:junit:4.14.0"),
+        }
+
+        for name, (current, updated) in updates.items():
+            with self.subTest(name=name):
+                self.check_build_text(app_build=APP_BUILD.replace(current, updated))
+
+    def test_rejects_nonliteral_or_extra_dependency_lines(self):
+        kotlin_line = "    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')"
+        appcompat_line = "    implementation 'androidx.appcompat:appcompat:1.7.1'"
+        lifecycle_line = "    implementation 'androidx.lifecycle:lifecycle-livedata:2.9.4'"
+        core_testing_line = "    testImplementation 'androidx.arch.core:core-testing:2.2.0'"
+        junit_line = "    testImplementation 'junit:junit:4.13.2'"
+        mutations = {
+            "dynamic Kotlin BOM": APP_BUILD.replace(
+                kotlin_line,
+                "    implementation platform('org.jetbrains.kotlin:kotlin-bom:+')",
+            ),
+            "nonliteral AppCompat": APP_BUILD.replace(
+                appcompat_line,
+                "    implementation \"androidx.appcompat:appcompat:${appcompatVersion}\"",
+            ),
+            "dynamic Lifecycle": APP_BUILD.replace(
+                lifecycle_line,
+                "    implementation 'androidx.lifecycle:lifecycle-livedata:+'",
+            ),
+            "nonliteral Core Testing": APP_BUILD.replace(
+                core_testing_line,
+                "    testImplementation \"androidx.arch.core:core-testing:${coreTestingVersion}\"",
+            ),
+            "dynamic JUnit": APP_BUILD.replace(
+                junit_line,
+                "    testImplementation 'junit:junit:latest.release'",
+            ),
+            "duplicate dependency": APP_BUILD.replace(
+                appcompat_line,
+                appcompat_line + "\n" + appcompat_line,
+            ),
+            "extra dependency": APP_BUILD.replace(
+                junit_line,
+                junit_line + "\n    implementation 'com.example:extra:1.0.0'",
+            ),
+        }
+
+        for name, app_build in mutations.items():
+            with self.subTest(name=name), self.assertRaises(AssertionError):
+                self.check_build_text(app_build=app_build)
+
+    def test_rejects_noncanonical_wrapper_content(self):
+        checksum = "distributionSha256Sum=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+        url = "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.15.0-bin.zip"
+        mutations = {
+            "dynamic version": WRAPPER_WITH_UPDATED_GRADLE.replace("gradle-8.15.0-bin.zip", "gradle-latest-bin.zip"),
+            "comment": WRAPPER_WITH_UPDATED_GRADLE + "# unexpected\n",
+            "duplicate url": WRAPPER_WITH_UPDATED_GRADLE.replace(url, url + "\n" + url),
+            "missing checksum": WRAPPER_WITH_UPDATED_GRADLE.replace(checksum + "\n", ""),
+            "duplicate checksum": WRAPPER_WITH_UPDATED_GRADLE.replace(checksum, checksum + "\n" + checksum),
+            "empty checksum": WRAPPER_WITH_UPDATED_GRADLE.replace(checksum, "distributionSha256Sum=\n" + checksum),
+            "colon separator": WRAPPER_WITH_UPDATED_GRADLE + "distributionUrl: gradle-latest-bin.zip\n",
+            "whitespace separator": WRAPPER_WITH_UPDATED_GRADLE + "distributionSha256Sum deadbeef\n",
+            "unicode key": WRAPPER_WITH_UPDATED_GRADLE + "distribution\\u0055rl=gradle-latest-bin.zip\n",
+            "continuation": WRAPPER_WITH_UPDATED_GRADLE + "unexpected=one\\\ntwo\n",
+            "extra key": WRAPPER_WITH_UPDATED_GRADLE + "unexpected=true\n",
+        }
+
+        for name, wrapper in mutations.items():
+            with self.subTest(name=name), self.assertRaises(AssertionError):
+                self.check_build_text(wrapper=wrapper)
+
+    def test_rejects_noncanonical_makefile_content(self):
+        recipe = (
+            '\tcd "$(ROOT)" && PYTHONDONTWRITEBYTECODE=1 $(PYTHON) '
+            "-m unittest tests.test_check_android_contracts -v\n"
+        )
+        static_block = (
+            "static:\n"
+            + recipe
+            + '\t$(PYTHON) "$(ROOT)/scripts/check_android_contracts.py"\n'
+        )
+        mutations = {
+            "duplicate recipe": MAKEFILE.replace(recipe, recipe + recipe),
+            "recipe under decoy target": MAKEFILE.replace(
+                static_block,
+                "decoy:\n"
+                + recipe
+                + "\nstatic:\n"
+                + '\t$(PYTHON) "$(ROOT)/scripts/check_android_contracts.py"\n',
+            ),
+            "no-op static target": MAKEFILE.replace(
+                static_block,
+                "decoy:\n"
+                + recipe
+                + '\t$(PYTHON) "$(ROOT)/scripts/check_android_contracts.py"\n\n'
+                + "static: ; @true\n",
+            ),
+            "disabled python": MAKEFILE.replace("PYTHON ?= python3", "PYTHON := true"),
+        }
+
+        for name, makefile in mutations.items():
+            with self.subTest(name=name), self.assertRaises(AssertionError):
+                self.check_build_text(makefile=makefile)
+
+
+class StaticVerificationEntryPointTest(unittest.TestCase):
+    def test_make_static_runs_from_outside_repository(self):
+        if os.environ.get("ANDROID_CONTRACT_EXTERNAL_MAKE_TEST") == "1":
+            self.assertEqual(contracts.ROOT, Path.cwd())
+            return
+
+        environment = os.environ.copy()
+        environment["ANDROID_CONTRACT_EXTERNAL_MAKE_TEST"] = "1"
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            result = subprocess.run(
+                ["make", "-f", str(contracts.ROOT / "Makefile"), "static"],
+                cwd=temporary_directory,
+                env=environment,
+                capture_output=True,
+                text=True,
+                check=False,
+            )
+
+        self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+
+class CheckDependabotContractsTest(unittest.TestCase):
+    def test_accepts_canonical_content_with_optional_trailing_newline(self):
+        contracts.check_dependabot_contracts_text(VALID_DEPENDABOT)
+        contracts.check_dependabot_contracts_text(VALID_DEPENDABOT.rstrip("\n"))
+
+    def test_rejects_noncanonical_content(self):
+        gradle_block = VALID_DEPENDABOT.split("  - package-ecosystem: github-actions\n", 1)[0]
+        mutations = {
+            "missing update types": VALID_DEPENDABOT.replace(
+                "        update-types:\n          - minor\n          - patch\n", "", 1
+            ),
+            "major grouped": VALID_DEPENDABOT.replace(
+                "          - patch\n", "          - patch\n          - major\n", 1
+            ),
+            "missing groups": VALID_DEPENDABOT.replace("    groups:\n", "", 1),
+            "misindented groups": VALID_DEPENDABOT.replace(
+                "    groups:\n", "  groups:\n", 1
+            ),
+            "extra wildcard group": VALID_DEPENDABOT.replace(
+                "      android-dependencies:\n",
+                "      all-gradle-majors:\n"
+                "        patterns:\n"
+                "          - \"*\"\n"
+                "      android-dependencies:\n",
+                1,
+            ),
+            "duplicate groups": VALID_DEPENDABOT.replace(
+                "  - package-ecosystem: github-actions\n",
+                "    groups:\n"
+                "      unsafe-override:\n"
+                "        patterns:\n"
+                "          - \"*\"\n"
+                "  - package-ecosystem: github-actions\n",
+            ),
+            "extra setting": VALID_DEPENDABOT.replace(
+                "    schedule:\n      interval: weekly\n",
+                "    schedule:\n"
+                "      interval: weekly\n"
+                "    open-pull-requests-limit: 5\n",
+                1,
+            ),
+            "duplicate ecosystem": (
+                VALID_DEPENDABOT + gradle_block.split("updates:\n", 1)[1]
+            ),
+            "flow groups": VALID_DEPENDABOT.replace(
+                "    groups:\n"
+                "      android-dependencies:\n"
+                "        patterns:\n"
+                "          - \"*\"\n"
+                "        update-types:\n"
+                "          - minor\n"
+                "          - patch\n",
+                "    groups: { android-dependencies: { patterns: [\"*\"], "
+                "update-types: [minor, patch] } }\n",
+                1,
+            ),
+        }
+
+        for name, dependabot in mutations.items():
+            with self.subTest(name=name), self.assertRaises(AssertionError):
+                contracts.check_dependabot_contracts_text(dependabot)
+
+    def test_main_invokes_dependabot_contracts(self):
+        with (
+            patch.object(contracts, "check_docs_plans", lambda: None),
+            patch.object(contracts, "check_xml_resources", lambda: None),
+            patch.object(contracts, "check_manifest_contracts", lambda: None),
+            patch.object(contracts, "check_gradle_application_id", lambda: None),
+            patch.object(contracts, "check_hosted_verification", lambda: None),
+            patch.object(contracts, "check_coordinate_input_guard", lambda: None),
+            patch.object(contracts, "check_modern_android_build", lambda: None),
+            patch.object(contracts, "read_text", return_value="version: 2\nupdates: []\n"),
+            redirect_stderr(io.StringIO()),
+        ):
+            self.assertEqual(1, contracts.main())
+
+
+if __name__ == "__main__":
+    unittest.main()

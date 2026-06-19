@@ -22,6 +22,219 @@ GEOCODER_AVAILABILITY_PLAN = DOCS_PLANS / "2026-06-13-geocoder-availability.md"
 SINGLE_INFLIGHT_PLAN = DOCS_PLANS / "2026-06-13-single-inflight-geocode-request.md"
 ROOT_OVERRIDE_PLAN = DOCS_PLANS / "2026-06-14-make-root-override-protection.md"
 RECREATION_RESULT_PLAN = DOCS_PLANS / "2026-06-17-activity-recreation-result-state.md"
+ACTION_LINE_PATTERN = re.compile(
+    r"^        uses: "
+    r"(?P<action>actions/(?:checkout|setup-python|setup-java))"
+    r"@[0-9a-f]{40} # v\d+\.\d+\.\d+$"
+)
+ROOT_BUILD_PATTERN = re.compile(
+    r'plugins \{\n'
+    r'    id "com\.android\.application" version "\d+\.\d+\.\d+" apply false\n'
+    r'\}\n?'
+)
+APP_DEPENDENCY_PATTERNS = (
+    (
+        "kotlin-bom",
+        re.compile(
+            r"^    implementation platform\('org\.jetbrains\.kotlin:"
+            r"kotlin-bom:\d+\.\d+\.\d+'\)$"
+        ),
+        "    implementation platform('org.jetbrains.kotlin:kotlin-bom:<VERSION>')",
+    ),
+    (
+        "appcompat",
+        re.compile(
+            r"^    implementation 'androidx\.appcompat:appcompat:"
+            r"\d+\.\d+\.\d+'$"
+        ),
+        "    implementation 'androidx.appcompat:appcompat:<VERSION>'",
+    ),
+    (
+        "lifecycle-livedata",
+        re.compile(
+            r"^    implementation 'androidx\.lifecycle:lifecycle-livedata:"
+            r"\d+\.\d+\.\d+'$"
+        ),
+        "    implementation 'androidx.lifecycle:lifecycle-livedata:<VERSION>'",
+    ),
+    (
+        "lifecycle-viewmodel",
+        re.compile(
+            r"^    implementation 'androidx\.lifecycle:lifecycle-viewmodel:"
+            r"\d+\.\d+\.\d+'$"
+        ),
+        "    implementation 'androidx.lifecycle:lifecycle-viewmodel:<VERSION>'",
+    ),
+    (
+        "core-testing",
+        re.compile(
+            r"^    testImplementation 'androidx\.arch\.core:core-testing:"
+            r"\d+\.\d+\.\d+'$"
+        ),
+        "    testImplementation 'androidx.arch.core:core-testing:<VERSION>'",
+    ),
+    (
+        "junit",
+        re.compile(r"^    testImplementation 'junit:junit:\d+\.\d+\.\d+'$"),
+        "    testImplementation 'junit:junit:<VERSION>'",
+    ),
+)
+CANONICAL_APP_BUILD = """plugins {
+    id 'com.android.application'
+}
+
+android {
+    namespace = 'com.sample.foo.tsgeocodeapp'
+    compileSdk = 36
+
+    defaultConfig {
+        applicationId = 'com.sample.foo.tsgeocodeapp'
+        minSdk = 21
+        targetSdk = 36
+        versionCode = 1
+        versionName = '1.0'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled = false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    lint {
+        warningsAsErrors = true
+    }
+}
+
+dependencies {
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:<VERSION>')
+    implementation 'androidx.appcompat:appcompat:<VERSION>'
+    //noinspection GradleDependency -- Lifecycle 2.10+ requires minSdk 23.
+    implementation 'androidx.lifecycle:lifecycle-livedata:<VERSION>'
+    //noinspection GradleDependency -- Lifecycle 2.10+ requires minSdk 23.
+    implementation 'androidx.lifecycle:lifecycle-viewmodel:<VERSION>'
+
+    testImplementation 'androidx.arch.core:core-testing:<VERSION>'
+    testImplementation 'junit:junit:<VERSION>'
+}"""
+GRADLE_WRAPPER_PATTERN = re.compile(
+    r"distributionBase=GRADLE_USER_HOME\n"
+    r"distributionPath=wrapper/dists\n"
+    r"distributionSha256Sum=[0-9a-fA-F]{64}\n"
+    r"distributionUrl=https\\://services\.gradle\.org/distributions/"
+    r"gradle-\d+\.\d+(?:\.\d+)?-bin\.zip\n"
+    r"networkTimeout=10000\n"
+    r"validateDistributionUrl=true\n"
+    r"zipStoreBase=GRADLE_USER_HOME\n"
+    r"zipStorePath=wrapper/dists\n?"
+)
+CANONICAL_WORKFLOW = """name: Check
+
+on:
+  pull_request:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: check-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static-contracts:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.12"]
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@<SHA> # v<VERSION>
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@<SHA> # v<VERSION>
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Run repository verification
+        run: make static
+
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@<SHA> # v<VERSION>
+        with:
+          persist-credentials: false
+      - name: Set up Java
+        uses: actions/setup-java@<SHA> # v<VERSION>
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+      - name: Install Android SDK packages
+        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;35.0.0"
+      - name: Run Android verification
+        run: make check"""
+CANONICAL_MAKEFILE = """.PHONY: build check lint static test verify
+
+override ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
+PYTHON ?= python3
+GRADLEW ?= $(ROOT)/gradlew
+
+static:
+	cd "$(ROOT)" && PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest tests.test_check_android_contracts -v
+	$(PYTHON) "$(ROOT)/scripts/check_android_contracts.py"
+
+test:
+	cd "$(ROOT)" && "$(GRADLEW)" --no-daemon testDebugUnitTest
+
+build:
+	cd "$(ROOT)" && "$(GRADLEW)" --no-daemon assembleDebug
+
+lint: static
+	cd "$(ROOT)" && "$(GRADLEW)" --no-daemon lintDebug
+
+verify: static
+	cd "$(ROOT)" && "$(GRADLEW)" --no-daemon testDebugUnitTest assembleDebug lintDebug
+
+check: verify"""
+CANONICAL_DEPENDABOT = """version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      android-dependencies:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch"""
 
 
 def fail(message):
@@ -172,75 +385,42 @@ def check_gradle_application_id():
     )
 
 
+def check_hosted_verification_text(workflow):
+    normalized_lines = []
+    actions = []
+    for line in workflow.splitlines():
+        match = ACTION_LINE_PATTERN.fullmatch(line)
+        if match is None:
+            normalized_lines.append(line)
+            continue
+        action = match.group("action")
+        actions.append(action)
+        normalized_lines.append(f"        uses: {action}@<SHA> # v<VERSION>")
+
+    require(
+        actions
+        == [
+            "actions/checkout",
+            "actions/setup-python",
+            "actions/checkout",
+            "actions/setup-java",
+        ],
+        "hosted verification must contain exactly four canonical action lines",
+    )
+    normalized = "\n".join(normalized_lines)
+    require(
+        normalized in (CANONICAL_WORKFLOW, CANONICAL_WORKFLOW + "\n"),
+        ".github/workflows/check.yml must match the canonical workflow template",
+    )
+
+
 def check_hosted_verification():
-    workflow = read_text(".github/workflows/check.yml")
     workflow_files = sorted((ROOT / ".github" / "workflows").glob("*"))
     require(
         workflow_files == [ROOT / ".github" / "workflows" / "check.yml"],
         "hosted verification must contain only the reviewed check workflow",
     )
-    required_contracts = [
-        "pull_request:",
-        "workflow_dispatch:",
-        "branches:\n      - master",
-        "permissions:\n  contents: read",
-        "group: check-${{ github.workflow }}-${{ github.ref }}",
-        "cancel-in-progress: true",
-        "runs-on: ubuntu-24.04",
-        "timeout-minutes: 5",
-        "timeout-minutes: 15",
-        'python-version: ["3.10", "3.12"]',
-        "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3",
-        "actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0",
-        "actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.1.0",
-        "java-version: \"17\"",
-        "run: make static",
-        '$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;35.0.0"',
-        "run: make check",
-    ]
-    for contract in required_contracts:
-        require(contract in workflow, f"hosted verification must include {contract!r}")
-    require(
-        workflow.count("runs-on: ubuntu-24.04") == 2,
-        "both hosted verification jobs must use Ubuntu 24.04",
-    )
-    require(
-        "ubuntu-latest" not in workflow,
-        "hosted verification must not use a floating Ubuntu runner",
-    )
-    require(
-        workflow.count(
-            "actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3"
-        )
-        == 2,
-        "both hosted verification jobs must use the annotated checkout pin",
-    )
-    require(
-        workflow.count("uses: actions/checkout@") == 2
-        and workflow.count("persist-credentials: false") == 2,
-        "both checkout steps must be unique and must not persist credentials",
-    )
-    require(
-        workflow.count("uses: actions/setup-python@") == 1
-        and workflow.count("uses: actions/setup-java@") == 1,
-        "hosted verification must keep one Python setup and one Java setup step",
-    )
-    require(
-        workflow.count("permissions:") == 1
-        and "permissions:\n  contents: read" in workflow,
-        "hosted verification must keep one top-level read-only permissions block",
-    )
-    require(
-        "pull_request_target:" not in workflow
-        and "permissions: write-all" not in workflow
-        and not re.search(
-            r"^[ \t]+[A-Za-z0-9_-]+:[ \t]+write(?:[ \t]+#.*)?$",
-            workflow,
-            re.MULTILINE,
-        ),
-        "hosted verification must not use privileged triggers or write permissions",
-    )
-    require("@v" not in workflow, "hosted verification actions must use immutable SHAs")
+    check_hosted_verification_text(read_text(".github/workflows/check.yml"))
 
 
 def check_coordinate_input_guard():
@@ -593,70 +773,75 @@ def check_coordinate_input_guard():
         require(test_name in validator_test, f"validator unit test is missing {test_name}")
 
 
+def check_modern_android_build_text(root_build, app_build, wrapper, makefile):
+    require(
+        ROOT_BUILD_PATTERN.fullmatch(root_build) is not None,
+        "build.gradle must match the canonical literal AGP declaration",
+    )
+    require(
+        not app_build.endswith("\n\n"),
+        "app/build.gradle must have at most one trailing newline",
+    )
+    app_build_content = app_build[:-1] if app_build.endswith("\n") else app_build
+    normalized_app_build_lines = []
+    dependencies = []
+    for line in app_build_content.split("\n"):
+        for dependency, pattern, placeholder in APP_DEPENDENCY_PATTERNS:
+            if pattern.fullmatch(line) is None:
+                continue
+            dependencies.append(dependency)
+            normalized_app_build_lines.append(placeholder)
+            break
+        else:
+            normalized_app_build_lines.append(line)
+
+    normalized_app_build = "\n".join(normalized_app_build_lines)
+    require(
+        dependencies
+        == [
+            "kotlin-bom",
+            "appcompat",
+            "lifecycle-livedata",
+            "lifecycle-viewmodel",
+            "core-testing",
+            "junit",
+        ]
+        and normalized_app_build == CANONICAL_APP_BUILD,
+        "app/build.gradle must match the canonical Android application build",
+    )
+    require(
+        GRADLE_WRAPPER_PATTERN.fullmatch(wrapper) is not None,
+        "gradle-wrapper.properties must match the canonical pinned wrapper template",
+    )
+    require(
+        makefile in (CANONICAL_MAKEFILE, CANONICAL_MAKEFILE + "\n"),
+        "Makefile must match the canonical verification targets",
+    )
+
+
 def check_modern_android_build():
-    root_build = read_text("build.gradle")
-    app_build = read_text("app/build.gradle")
-    wrapper = read_text("gradle/wrapper/gradle-wrapper.properties")
-    makefile = read_text("Makefile")
-    root_declaration = "override ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))"
-    root_assignments = re.findall(
-        r"^(?:override\s+)?ROOT\s*[:+?]?=", makefile, re.MULTILINE
+    check_modern_android_build_text(
+        read_text("build.gradle"),
+        read_text("app/build.gradle"),
+        read_text("gradle/wrapper/gradle-wrapper.properties"),
+        read_text("Makefile"),
     )
     require(
-        len(root_assignments) == 1 and makefile.count(root_declaration) == 1,
-        "Makefile must contain exactly one protected repository-root declaration",
-    )
-    require(
-        makefile.count(
-            f"{root_declaration}\nPYTHON ?= python3\nGRADLEW ?= $(ROOT)/gradlew"
-        )
-        == 1,
-        "Makefile must keep the protected root before configurable tools",
-    )
-    require('version "8.10.1"' in root_build, "Android Gradle Plugin must remain pinned")
-    require("compileSdk = 36" in app_build, "compileSdk must remain on API 36")
-    require("targetSdk = 36" in app_build, "targetSdk must remain on API 36")
-    require("minSdk = 21" in app_build, "minSdk must match AndroidX AppCompat support")
-    require(
-        "androidx.lifecycle:lifecycle-livedata:2.9.4" in app_build
-        and "androidx.lifecycle:lifecycle-viewmodel:2.9.4" in app_build,
-        "API 21-compatible Lifecycle dependencies must remain pinned to 2.9.4",
-    )
-    require(
-        app_build.count(
-            "//noinspection GradleDependency -- Lifecycle 2.10+ requires minSdk 23."
-        )
-        == 2,
-        "Lifecycle dependency lint suppressions must retain the API 21 rationale",
-    )
-    require(
-        "androidx.arch.core:core-testing:2.2.0" in app_build,
-        "LiveData unit tests must retain the pinned Architecture Components helper",
-    )
-    require("warningsAsErrors = true" in app_build, "Android lint warnings must fail verification")
-    require(
-        "gradle-8.14.5-bin.zip" in wrapper,
-        "Gradle wrapper distribution must remain pinned to 8.14.5",
-    )
-    require(
-        "distributionSha256Sum=6f74b601422d6d6fc4e1f9a1ab6522f642c2fdcbc15ae33ebd30ba3d7198e854"
-        in wrapper,
-        "Gradle wrapper distribution checksum must remain pinned",
-    )
-    for fragment in (
-        ".PHONY: build check lint static test verify",
-        "lint: static",
-        "verify: static",
-        "check: verify",
-        "GRADLEW ?= $(ROOT)/gradlew",
-        '$(PYTHON) "$(ROOT)/scripts/check_android_contracts.py"',
-        'cd "$(ROOT)" && "$(GRADLEW)"',
-    ):
-        require(fragment in makefile, f"Makefile must support invocation outside the repository: {fragment}")
-    require(
-        "docs/plans/2026-06-14-make-root-override-protection.md" in read_text("README.md"),
+        "docs/plans/2026-06-14-make-root-override-protection.md"
+        in read_text("README.md"),
         "README.md must index Make root override protection evidence",
     )
+
+
+def check_dependabot_contracts_text(dependabot):
+    require(
+        dependabot in (CANONICAL_DEPENDABOT, CANONICAL_DEPENDABOT + "\n"),
+        ".github/dependabot.yml must match the canonical grouped update policy",
+    )
+
+
+def check_dependabot_contracts():
+    check_dependabot_contracts_text(read_text(".github/dependabot.yml"))
 
 
 def main():
@@ -668,6 +853,7 @@ def main():
         check_hosted_verification,
         check_coordinate_input_guard,
         check_modern_android_build,
+        check_dependabot_contracts,
     ]
     try:
         for check in checks:
