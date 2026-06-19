@@ -2,6 +2,8 @@
 
 ## 2026-06-13
 
+- Added activity and service guards that fail with localized feedback when
+  Android reports no platform geocoder backend.
 - Replaced the deprecated untyped parcelable receiver read with AndroidX's
   typed `IntentCompat` API while preserving the missing-receiver guard.
 
