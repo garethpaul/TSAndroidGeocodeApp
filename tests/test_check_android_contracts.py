@@ -158,6 +158,11 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # Lifecycle 2.10+ requires minSdk 23; remove after the API 21 migration.
+      - dependency-name: "androidx.lifecycle:*"
+        versions:
+          - "[2.10.0,)"
     groups:
       android-dependencies:
         patterns:
@@ -408,6 +413,30 @@ class StaticVerificationEntryPointTest(unittest.TestCase):
 
 
 class CheckDependabotContractsTest(unittest.TestCase):
+    def test_requires_api_21_lifecycle_version_ceiling(self):
+        contracts.check_dependabot_contracts_text(VALID_DEPENDABOT)
+
+        lifecycle_ceiling = (
+            "    ignore:\n"
+            "      # Lifecycle 2.10+ requires minSdk 23; remove after the API 21 migration.\n"
+            "      - dependency-name: \"androidx.lifecycle:*\"\n"
+            "        versions:\n"
+            "          - \"[2.10.0,)\"\n"
+        )
+        mutations = {
+            "missing ceiling": VALID_DEPENDABOT.replace(lifecycle_ceiling, "", 1),
+            "all Lifecycle updates ignored": VALID_DEPENDABOT.replace(
+                "        versions:\n          - \"[2.10.0,)\"\n", "", 1
+            ),
+            "compatible 2.9 updates ignored": VALID_DEPENDABOT.replace(
+                "[2.10.0,)", "[2.9.0,)", 1
+            ),
+        }
+
+        for name, dependabot in mutations.items():
+            with self.subTest(name=name), self.assertRaises(AssertionError):
+                contracts.check_dependabot_contracts_text(dependabot)
+
     def test_accepts_canonical_content_with_optional_trailing_newline(self):
         contracts.check_dependabot_contracts_text(VALID_DEPENDABOT)
         contracts.check_dependabot_contracts_text(VALID_DEPENDABOT.rstrip("\n"))
