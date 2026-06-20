@@ -1,6 +1,7 @@
 import io
 import os
 import subprocess
+import sys
 import tempfile
 import unittest
 from contextlib import redirect_stderr
@@ -39,6 +40,8 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
+      - name: Verify clean checkout
+        run: make checkout-integrity
       - name: Set up Python
         uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
         with:
@@ -54,6 +57,8 @@ jobs:
         uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6.0.3
         with:
           persist-credentials: false
+      - name: Verify clean checkout
+        run: make checkout-integrity
       - name: Set up Java
         uses: actions/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287 # v5.3.0
         with:
@@ -61,13 +66,15 @@ jobs:
           java-version: "17"
           cache: gradle
       - name: Install Android SDK packages
-        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;35.0.0"
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;35.0.0"'
       - name: Run Android verification
         run: make check
+      - name: Verify build kept checkout clean
+        run: make checkout-integrity
 """
 
 ROOT_BUILD_WITH_UPDATED_AGP = """plugins {
-    id "com.android.application" version "8.11.0" apply false
+    id "com.android.application" version "8.10.1" apply false
 }
 """
 
@@ -105,7 +112,7 @@ android {
 }
 
 dependencies {
-    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')
+    implementation platform('org.jetbrains.kotlin:kotlin-bom:2.2.21')
     implementation 'androidx.appcompat:appcompat:1.7.1'
     //noinspection GradleDependency -- Lifecycle 2.10+ requires minSdk 23.
     implementation 'androidx.lifecycle:lifecycle-livedata:2.9.4'
@@ -119,19 +126,24 @@ dependencies {
 
 WRAPPER_WITH_UPDATED_GRADLE = """distributionBase=GRADLE_USER_HOME
 distributionPath=wrapper/dists
-distributionSha256Sum=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
-distributionUrl=https\\://services.gradle.org/distributions/gradle-8.15.0-bin.zip
+distributionSha256Sum=bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01
+distributionUrl=https\\://services.gradle.org/distributions/gradle-9.6.0-bin.zip
 networkTimeout=10000
 validateDistributionUrl=true
 zipStoreBase=GRADLE_USER_HOME
 zipStorePath=wrapper/dists
 """
 
-MAKEFILE = """.PHONY: build check lint static test verify
+MAKEFILE = """.PHONY: build check checkout-integrity lint static test verify
 
 override ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 PYTHON ?= python3
 GRADLEW ?= $(ROOT)/gradlew
+
+checkout-integrity:
+\tcd "$(ROOT)" && test -z "$$(git status --porcelain --untracked-files=no)"
+\tcd "$(ROOT)" && git ls-files --eol gradlew | grep -Eq '^i/lf[[:space:]]+w/lf[[:space:]]+attr/text eol=lf[[:space:]]+gradlew$$'
+\tcd "$(ROOT)" && git ls-files --eol gradlew.bat | grep -Eq '^i/lf[[:space:]]+w/crlf[[:space:]]+attr/text eol=crlf[[:space:]]+gradlew[.]bat$$'
 
 static:
 \tcd "$(ROOT)" && PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest tests.test_check_android_contracts -v
@@ -147,7 +159,7 @@ lint: static
 \tcd "$(ROOT)" && "$(GRADLEW)" --no-daemon lintDebug
 
 verify: static
-\tcd "$(ROOT)" && "$(GRADLEW)" --no-daemon testDebugUnitTest assembleDebug lintDebug
+\tcd "$(ROOT)" && $(PYTHON) "$(ROOT)/scripts/run_android_verification.py" "$(GRADLEW)"
 
 check: verify
 """
@@ -219,19 +231,50 @@ class CheckModernAndroidBuildContractsTest(unittest.TestCase):
         root_build=ROOT_BUILD_WITH_UPDATED_AGP,
         app_build=APP_BUILD,
         wrapper=WRAPPER_WITH_UPDATED_GRADLE,
-        makefile=MAKEFILE,
+        makefile=None,
     ):
+        if makefile is None:
+            makefile = contracts.CANONICAL_MAKEFILE
         contracts.check_modern_android_build_text(root_build, app_build, wrapper, makefile)
 
-    def test_accepts_updated_literal_toolchain_versions_and_wrapper_checksum(self):
+    def test_accepts_reviewed_toolchain_tuple(self):
         self.check_build_text()
+
+    def test_rejects_unsupported_kotlin_agp_matrix(self):
+        cases = {
+            "2.3.0": "Kotlin 2.3 requires AGP 8.13.2",
+            "2.4.0": "Kotlin 2.4 requires AGP 9.1.0",
+            "2.5.0": "Kotlin 2.5 is not in the reviewed compatibility matrix",
+        }
+
+        for kotlin_version, message in cases.items():
+            unsupported = APP_BUILD.replace("kotlin-bom:2.2.21", f"kotlin-bom:{kotlin_version}")
+            with self.subTest(kotlin_version=kotlin_version), self.assertRaisesRegex(
+                AssertionError, message
+            ):
+                self.check_build_text(app_build=unsupported)
+
+    def test_rejects_mismatched_gradle_distribution_checksum(self):
+        mismatched = WRAPPER_WITH_UPDATED_GRADLE.replace(
+            "bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01",
+            "a" * 64,
+        )
+
+        with self.assertRaisesRegex(AssertionError, "reviewed Gradle wrapper tuple"):
+            self.check_build_text(wrapper=mismatched)
+
+    def test_binds_reviewed_wrapper_jar_checksum(self):
+        self.assertEqual(
+            getattr(contracts, "GRADLE_WRAPPER_JAR_SHA256", None),
+            "497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7",
+        )
 
     def test_rejects_noncanonical_root_build_content(self):
         mutations = {
-            "dynamic version": ROOT_BUILD_WITH_UPDATED_AGP.replace('version "8.11.0"', 'version "+"'),
+            "dynamic version": ROOT_BUILD_WITH_UPDATED_AGP.replace('version "8.10.1"', 'version "+"'),
             "comment": ROOT_BUILD_WITH_UPDATED_AGP.replace("}", "    // unexpected\n}"),
             "duplicate": ROOT_BUILD_WITH_UPDATED_AGP.replace(
-                "}", '    id "com.android.application" version "8.12.0" apply false\n}'
+                "}", '    id "com.android.application" version "8.11.0" apply false\n}'
             ),
             "unicode declaration": ROOT_BUILD_WITH_UPDATED_AGP
             + 'id "com.android.applicat\\u0069on" version "+" apply false\n',
@@ -269,8 +312,8 @@ class CheckModernAndroidBuildContractsTest(unittest.TestCase):
     def test_accepts_updated_literal_dependency_versions(self):
         updates = {
             "Kotlin BOM": (
-                "org.jetbrains.kotlin:kotlin-bom:1.8.22",
-                "org.jetbrains.kotlin:kotlin-bom:2.1.0",
+                "org.jetbrains.kotlin:kotlin-bom:2.2.21",
+                "org.jetbrains.kotlin:kotlin-bom:2.2.20",
             ),
             "AppCompat": (
                 "androidx.appcompat:appcompat:1.7.1",
@@ -296,7 +339,7 @@ class CheckModernAndroidBuildContractsTest(unittest.TestCase):
                 self.check_build_text(app_build=APP_BUILD.replace(current, updated))
 
     def test_rejects_nonliteral_or_extra_dependency_lines(self):
-        kotlin_line = "    implementation platform('org.jetbrains.kotlin:kotlin-bom:1.8.22')"
+        kotlin_line = "    implementation platform('org.jetbrains.kotlin:kotlin-bom:2.2.21')"
         appcompat_line = "    implementation 'androidx.appcompat:appcompat:1.7.1'"
         lifecycle_line = "    implementation 'androidx.lifecycle:lifecycle-livedata:2.9.4'"
         core_testing_line = "    testImplementation 'androidx.arch.core:core-testing:2.2.0'"
@@ -337,10 +380,10 @@ class CheckModernAndroidBuildContractsTest(unittest.TestCase):
                 self.check_build_text(app_build=app_build)
 
     def test_rejects_noncanonical_wrapper_content(self):
-        checksum = "distributionSha256Sum=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
-        url = "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.15.0-bin.zip"
+        checksum = "distributionSha256Sum=bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01"
+        url = "distributionUrl=https\\://services.gradle.org/distributions/gradle-9.6.0-bin.zip"
         mutations = {
-            "dynamic version": WRAPPER_WITH_UPDATED_GRADLE.replace("gradle-8.15.0-bin.zip", "gradle-latest-bin.zip"),
+            "dynamic version": WRAPPER_WITH_UPDATED_GRADLE.replace("gradle-9.6.0-bin.zip", "gradle-latest-bin.zip"),
             "comment": WRAPPER_WITH_UPDATED_GRADLE + "# unexpected\n",
             "duplicate url": WRAPPER_WITH_UPDATED_GRADLE.replace(url, url + "\n" + url),
             "missing checksum": WRAPPER_WITH_UPDATED_GRADLE.replace(checksum + "\n", ""),
@@ -358,6 +401,7 @@ class CheckModernAndroidBuildContractsTest(unittest.TestCase):
                 self.check_build_text(wrapper=wrapper)
 
     def test_rejects_noncanonical_makefile_content(self):
+        canonical_makefile = contracts.CANONICAL_MAKEFILE
         recipe = (
             '\tcd "$(ROOT)" && PYTHONDONTWRITEBYTECODE=1 $(PYTHON) '
             "-m unittest tests.test_check_android_contracts -v\n"
@@ -368,27 +412,123 @@ class CheckModernAndroidBuildContractsTest(unittest.TestCase):
             + '\t$(PYTHON) "$(ROOT)/scripts/check_android_contracts.py"\n'
         )
         mutations = {
-            "duplicate recipe": MAKEFILE.replace(recipe, recipe + recipe),
-            "recipe under decoy target": MAKEFILE.replace(
+            "duplicate recipe": canonical_makefile.replace(recipe, recipe + recipe),
+            "recipe under decoy target": canonical_makefile.replace(
                 static_block,
                 "decoy:\n"
                 + recipe
                 + "\nstatic:\n"
                 + '\t$(PYTHON) "$(ROOT)/scripts/check_android_contracts.py"\n',
             ),
-            "no-op static target": MAKEFILE.replace(
+            "no-op static target": canonical_makefile.replace(
                 static_block,
                 "decoy:\n"
                 + recipe
                 + '\t$(PYTHON) "$(ROOT)/scripts/check_android_contracts.py"\n\n'
                 + "static: ; @true\n",
             ),
-            "disabled python": MAKEFILE.replace("PYTHON ?= python3", "PYTHON := true"),
+            "disabled python": canonical_makefile.replace("PYTHON ?= python3", "PYTHON := true"),
         }
 
         for name, makefile in mutations.items():
             with self.subTest(name=name), self.assertRaises(AssertionError):
                 self.check_build_text(makefile=makefile)
+
+    def test_requires_checkout_and_metadata_gates_in_makefile(self):
+        self.check_build_text(makefile=MAKEFILE)
+
+
+class CheckoutIntegrityContractsTest(unittest.TestCase):
+    def test_repository_line_endings_are_canonical(self):
+        self.assertEqual(
+            (contracts.ROOT / ".gitattributes").read_text(encoding="utf-8"),
+            "* text=auto\ngradlew text eol=lf\ngradlew.bat text eol=crlf\n",
+        )
+        index_bytes = subprocess.run(
+            ["git", "show", ":gradlew.bat"],
+            cwd=contracts.ROOT,
+            check=True,
+            stdout=subprocess.PIPE,
+        ).stdout
+        self.assertNotIn(b"\r", index_bytes)
+        self.assertIn(b"\r\n", (contracts.ROOT / "gradlew.bat").read_bytes())
+        eol = subprocess.run(
+            ["git", "ls-files", "--eol", "gradlew", "gradlew.bat"],
+            cwd=contracts.ROOT,
+            check=True,
+            stdout=subprocess.PIPE,
+            text=True,
+        ).stdout
+        self.assertRegex(eol, r"(?m)^i/lf\s+w/lf\s+attr/text eol=lf\s+gradlew$")
+        self.assertRegex(eol, r"(?m)^i/lf\s+w/crlf\s+attr/text eol=crlf\s+gradlew\.bat$")
+
+
+class RunAndroidVerificationTest(unittest.TestCase):
+    def run_verifier(self, output, exit_code=0, require_app_dependency_insight=False):
+        with tempfile.TemporaryDirectory() as temp_dir:
+            fake_gradle = Path(temp_dir) / "gradle"
+            argument_guard = ""
+            if require_app_dependency_insight:
+                argument_guard = (
+                    "if any(argument.endswith('dependencyInsight') for argument in sys.argv) "
+                    "and ':app:dependencyInsight' not in sys.argv:\n    sys.exit(9)\n"
+                )
+            fake_gradle.write_text(
+                f"#!{sys.executable}\nimport sys\n{argument_guard}"
+                f"print({output!r})\nsys.exit({exit_code})\n",
+                encoding="utf-8",
+            )
+            fake_gradle.chmod(0o755)
+            return subprocess.run(
+                [
+                    sys.executable,
+                    str(contracts.ROOT / "scripts" / "run_android_verification.py"),
+                    str(fake_gradle),
+                ],
+                cwd=contracts.ROOT,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+                check=False,
+            )
+
+    def test_rejects_successful_gradle_output_with_kotlin_metadata_errors(self):
+        result = self.run_verifier(
+            "org.jetbrains.kotlin:kotlin-stdlib:2.2.21\n"
+            "An error occurred when parsing kotlin metadata\n"
+            "BUILD SUCCESSFUL"
+        )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("Kotlin metadata incompatibility", result.stderr)
+
+    def test_accepts_clean_gradle_output_with_expected_kotlin_resolution(self):
+        result = self.run_verifier(
+            "org.jetbrains.kotlin:kotlin-stdlib:2.2.21\nBUILD SUCCESSFUL"
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_rejects_dependency_insight_forced_to_newer_kotlin(self):
+        result = self.run_verifier(
+            "org.jetbrains.kotlin:kotlin-stdlib:2.2.21 -> 2.4.0\nBUILD SUCCESSFUL"
+        )
+
+        self.assertEqual(result.returncode, 1)
+        self.assertIn("resolved unexpected Kotlin stdlib", result.stderr)
+
+    def test_scopes_dependency_insight_to_app_project(self):
+        result = self.run_verifier(
+            "org.jetbrains.kotlin:kotlin-stdlib:2.2.21\nBUILD SUCCESSFUL",
+            require_app_dependency_insight=True,
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_propagates_gradle_failure(self):
+        result = self.run_verifier("Gradle failed", exit_code=7)
+
+        self.assertEqual(result.returncode, 7)
 
 
 class StaticVerificationEntryPointTest(unittest.TestCase):

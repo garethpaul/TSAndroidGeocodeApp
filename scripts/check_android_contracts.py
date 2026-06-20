@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Static verification for the legacy Android geocode sample."""
 
+import logging
 from pathlib import Path
 import re
+import subprocess
 import sys
 import xml.etree.ElementTree as ET
 
@@ -22,6 +24,23 @@ GEOCODER_AVAILABILITY_PLAN = DOCS_PLANS / "2026-06-13-geocoder-availability.md"
 SINGLE_INFLIGHT_PLAN = DOCS_PLANS / "2026-06-13-single-inflight-geocode-request.md"
 ROOT_OVERRIDE_PLAN = DOCS_PLANS / "2026-06-14-make-root-override-protection.md"
 RECREATION_RESULT_PLAN = DOCS_PLANS / "2026-06-17-activity-recreation-result-state.md"
+EXPECTED_AGP_VERSION = "8.10.1"
+EXPECTED_KOTLIN_BOM_VERSION = "2.2.21"
+EXPECTED_GRADLE_VERSION = "9.6.0"
+EXPECTED_GRADLE_DISTRIBUTION_SHA256 = (
+    "bbaeb2fef8710818cf0e261201dab964c572f92b942812df0c3620d62a529a01"
+)
+GRADLE_WRAPPER_JAR_SHA256 = "497c8c2a7e5031f6aa847f88104aa80a93532ec32ee17bdb8d1d2f67a194a9c7"
+CANONICAL_GITATTRIBUTES = "* text=auto\ngradlew text eol=lf\ngradlew.bat text eol=crlf\n"
+KOTLIN_MINIMUM_AGP = {
+    (1, 8): (7, 4, 0),
+    (1, 9): (8, 0, 0),
+    (2, 0): (8, 5, 0),
+    (2, 1): (8, 6, 0),
+    (2, 2): (8, 10, 0),
+    (2, 3): (8, 13, 2),
+    (2, 4): (9, 1, 0),
+}
 ACTION_LINE_PATTERN = re.compile(
     r"^        uses: "
     r"(?P<action>actions/(?:checkout|setup-python|setup-java))"
@@ -29,8 +48,13 @@ ACTION_LINE_PATTERN = re.compile(
 )
 ROOT_BUILD_PATTERN = re.compile(
     r'plugins \{\n'
-    r'    id "com\.android\.application" version "\d+\.\d+\.\d+" apply false\n'
+    r'    id "com\.android\.application" version "(?P<version>\d+\.\d+\.\d+)" apply false\n'
     r'\}\n?'
+)
+KOTLIN_BOM_PATTERN = re.compile(
+    r"^    implementation platform\('org\.jetbrains\.kotlin:"
+    r"kotlin-bom:(?P<version>\d+\.\d+\.\d+)'\)$",
+    re.MULTILINE,
 )
 APP_DEPENDENCY_PATTERNS = (
     (
@@ -123,17 +147,15 @@ dependencies {
     testImplementation 'androidx.arch.core:core-testing:<VERSION>'
     testImplementation 'junit:junit:<VERSION>'
 }"""
-GRADLE_WRAPPER_PATTERN = re.compile(
-    r"distributionBase=GRADLE_USER_HOME\n"
-    r"distributionPath=wrapper/dists\n"
-    r"distributionSha256Sum=[0-9a-fA-F]{64}\n"
-    r"distributionUrl=https\\://services\.gradle\.org/distributions/"
-    r"gradle-\d+\.\d+(?:\.\d+)?-bin\.zip\n"
-    r"networkTimeout=10000\n"
-    r"validateDistributionUrl=true\n"
-    r"zipStoreBase=GRADLE_USER_HOME\n"
-    r"zipStorePath=wrapper/dists\n?"
-)
+CANONICAL_GRADLE_WRAPPER = f"""distributionBase=GRADLE_USER_HOME
+distributionPath=wrapper/dists
+distributionSha256Sum={EXPECTED_GRADLE_DISTRIBUTION_SHA256}
+distributionUrl=https\\://services.gradle.org/distributions/gradle-{EXPECTED_GRADLE_VERSION}-bin.zip
+networkTimeout=10000
+validateDistributionUrl=true
+zipStoreBase=GRADLE_USER_HOME
+zipStorePath=wrapper/dists
+"""
 CANONICAL_WORKFLOW = """name: Check
 
 on:
@@ -163,6 +185,8 @@ jobs:
         uses: actions/checkout@<SHA> # v<VERSION>
         with:
           persist-credentials: false
+      - name: Verify clean checkout
+        run: make checkout-integrity
       - name: Set up Python
         uses: actions/setup-python@<SHA> # v<VERSION>
         with:
@@ -178,6 +202,8 @@ jobs:
         uses: actions/checkout@<SHA> # v<VERSION>
         with:
           persist-credentials: false
+      - name: Verify clean checkout
+        run: make checkout-integrity
       - name: Set up Java
         uses: actions/setup-java@<SHA> # v<VERSION>
         with:
@@ -185,14 +211,21 @@ jobs:
           java-version: "17"
           cache: gradle
       - name: Install Android SDK packages
-        run: $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "platforms;android-36" "build-tools;35.0.0"
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;35.0.0"'
       - name: Run Android verification
-        run: make check"""
-CANONICAL_MAKEFILE = """.PHONY: build check lint static test verify
+        run: make check
+      - name: Verify build kept checkout clean
+        run: make checkout-integrity"""
+CANONICAL_MAKEFILE = """.PHONY: build check checkout-integrity lint static test verify
 
 override ROOT := $(abspath $(dir $(lastword $(MAKEFILE_LIST))))
 PYTHON ?= python3
 GRADLEW ?= $(ROOT)/gradlew
+
+checkout-integrity:
+	cd "$(ROOT)" && test -z "$$(git status --porcelain --untracked-files=no)"
+	cd "$(ROOT)" && git ls-files --eol gradlew | grep -Eq '^i/lf[[:space:]]+w/lf[[:space:]]+attr/text eol=lf[[:space:]]+gradlew$$'
+	cd "$(ROOT)" && git ls-files --eol gradlew.bat | grep -Eq '^i/lf[[:space:]]+w/crlf[[:space:]]+attr/text eol=crlf[[:space:]]+gradlew[.]bat$$'
 
 static:
 	cd "$(ROOT)" && PYTHONDONTWRITEBYTECODE=1 $(PYTHON) -m unittest tests.test_check_android_contracts -v
@@ -208,7 +241,7 @@ lint: static
 	cd "$(ROOT)" && "$(GRADLEW)" --no-daemon lintDebug
 
 verify: static
-	cd "$(ROOT)" && "$(GRADLEW)" --no-daemon testDebugUnitTest assembleDebug lintDebug
+	cd "$(ROOT)" && $(PYTHON) "$(ROOT)/scripts/run_android_verification.py" "$(GRADLEW)"
 
 check: verify"""
 CANONICAL_DEPENDABOT = """version: 2
@@ -778,11 +811,47 @@ def check_coordinate_input_guard():
         require(test_name in validator_test, f"validator unit test is missing {test_name}")
 
 
+def parse_version(version):
+    return tuple(int(part) for part in version.split("."))
+
+
+def sha256_hexdigest(content):
+    logging_disable_level = logging.root.manager.disable
+    logging.disable(logging.CRITICAL)
+    try:
+        import hashlib
+    finally:
+        logging.disable(logging_disable_level)
+    return hashlib.sha256(content).hexdigest()
+
+
+def check_kotlin_agp_compatibility(root_build, app_build):
+    agp_match = ROOT_BUILD_PATTERN.fullmatch(root_build)
+    kotlin_match = KOTLIN_BOM_PATTERN.search(app_build)
+    require(agp_match is not None, "build.gradle must declare a literal AGP version")
+    require(kotlin_match is not None, "app/build.gradle must declare a literal Kotlin BOM")
+
+    agp_version = parse_version(agp_match.group("version"))
+    kotlin_version = parse_version(kotlin_match.group("version"))
+    kotlin_line = kotlin_version[:2]
+    minimum_agp = KOTLIN_MINIMUM_AGP.get(kotlin_line)
+    require(
+        minimum_agp is not None,
+        f"Kotlin {kotlin_line[0]}.{kotlin_line[1]} is not in the reviewed compatibility matrix",
+    )
+    require(
+        agp_version >= minimum_agp,
+        f"Kotlin {kotlin_line[0]}.{kotlin_line[1]} requires AGP "
+        f"{minimum_agp[0]}.{minimum_agp[1]}.{minimum_agp[2]}",
+    )
+
+
 def check_modern_android_build_text(root_build, app_build, wrapper, makefile):
     require(
         ROOT_BUILD_PATTERN.fullmatch(root_build) is not None,
         "build.gradle must match the canonical literal AGP declaration",
     )
+    check_kotlin_agp_compatibility(root_build, app_build)
     require(
         not app_build.endswith("\n\n"),
         "app/build.gradle must have at most one trailing newline",
@@ -815,8 +884,8 @@ def check_modern_android_build_text(root_build, app_build, wrapper, makefile):
         "app/build.gradle must match the canonical Android application build",
     )
     require(
-        GRADLE_WRAPPER_PATTERN.fullmatch(wrapper) is not None,
-        "gradle-wrapper.properties must match the canonical pinned wrapper template",
+        wrapper in (CANONICAL_GRADLE_WRAPPER, CANONICAL_GRADLE_WRAPPER.rstrip("\n")),
+        "gradle-wrapper.properties must match the reviewed Gradle wrapper tuple",
     )
     require(
         makefile in (CANONICAL_MAKEFILE, CANONICAL_MAKEFILE + "\n"),
@@ -825,11 +894,51 @@ def check_modern_android_build_text(root_build, app_build, wrapper, makefile):
 
 
 def check_modern_android_build():
+    root_build = read_text("build.gradle")
+    app_build = read_text("app/build.gradle")
+    wrapper = read_text("gradle/wrapper/gradle-wrapper.properties")
     check_modern_android_build_text(
-        read_text("build.gradle"),
-        read_text("app/build.gradle"),
-        read_text("gradle/wrapper/gradle-wrapper.properties"),
+        root_build,
+        app_build,
+        wrapper,
         read_text("Makefile"),
+    )
+    require(
+        ROOT_BUILD_PATTERN.fullmatch(root_build).group("version") == EXPECTED_AGP_VERSION,
+        f"build.gradle must pin reviewed AGP {EXPECTED_AGP_VERSION}",
+    )
+    require(
+        KOTLIN_BOM_PATTERN.search(app_build).group("version") == EXPECTED_KOTLIN_BOM_VERSION,
+        f"app/build.gradle must pin reviewed Kotlin BOM {EXPECTED_KOTLIN_BOM_VERSION}",
+    )
+    wrapper_jar_sha256 = sha256_hexdigest(
+        (ROOT / "gradle" / "wrapper" / "gradle-wrapper.jar").read_bytes()
+    )
+    require(
+        wrapper_jar_sha256 == GRADLE_WRAPPER_JAR_SHA256,
+        "gradle-wrapper.jar must match the reviewed Gradle wrapper tuple",
+    )
+    require(
+        read_text(".gitattributes") == CANONICAL_GITATTRIBUTES,
+        ".gitattributes must match the canonical line-ending policy",
+    )
+    eol_result = subprocess.run(
+        ["git", "ls-files", "--eol", "gradlew", "gradlew.bat"],
+        cwd=ROOT,
+        check=False,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+    )
+    require(eol_result.returncode == 0, "git must report wrapper line-ending metadata")
+    eol_lines = eol_result.stdout.splitlines()
+    require(
+        len(eol_lines) == 2
+        and re.fullmatch(r"i/lf\s+w/lf\s+attr/text eol=lf\s+gradlew", eol_lines[0])
+        and re.fullmatch(
+            r"i/lf\s+w/crlf\s+attr/text eol=crlf\s+gradlew\.bat", eol_lines[1]
+        ),
+        "wrapper scripts must use LF index blobs with canonical Unix/Windows worktree endings",
     )
     require(
         "docs/plans/2026-06-14-make-root-override-protection.md"
