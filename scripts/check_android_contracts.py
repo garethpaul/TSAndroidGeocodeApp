@@ -465,6 +465,55 @@ def check_hosted_verification():
     check_hosted_verification_text(read_text(".github/workflows/check.yml"))
 
 
+def check_service_coordinate_payload_text(service):
+    location_branch = re.search(
+        r"else if\(fetchType == Constants\.USE_ADDRESS_LOCATION\) \{"
+        r"(?P<body>.*?)\n        \}\n        else \{",
+        service,
+        re.DOTALL,
+    )
+    require(
+        location_branch is not None,
+        "IntentService must keep a dedicated location-mode request branch",
+    )
+    body = location_branch.group("body")
+    presence_guard = re.search(
+        r"if\s*\(\s*!intent\.hasExtra\(Constants\.LOCATION_LATITUDE_DATA_EXTRA\)"
+        r"\s*\|\|\s*!intent\.hasExtra\(Constants\.LOCATION_LONGITUDE_DATA_EXTRA\)"
+        r"\s*\)",
+        body,
+    )
+    require(
+        presence_guard is not None,
+        "IntentService must reject location requests missing either coordinate extra",
+    )
+
+    latitude_read = re.search(
+        r"intent\.getDoubleExtra\(\s*Constants\.LOCATION_LATITUDE_DATA_EXTRA",
+        body,
+    )
+    longitude_read = re.search(
+        r"intent\.getDoubleExtra\(\s*Constants\.LOCATION_LONGITUDE_DATA_EXTRA",
+        body,
+    )
+    geocoder_lookup = re.search(
+        r"addresses\s*=\s*geocoder\.getFromLocation\(latitude, longitude, 1\)",
+        body,
+    )
+    require(
+        latitude_read is not None
+        and longitude_read is not None
+        and geocoder_lookup is not None,
+        "IntentService must keep coordinate reads and geocoder lookup",
+    )
+    require(
+        presence_guard.start() < latitude_read.start()
+        and presence_guard.start() < longitude_read.start()
+        and presence_guard.start() < geocoder_lookup.start(),
+        "IntentService must verify coordinate extras before reading or geocoding them",
+    )
+
+
 def check_coordinate_input_guard():
     main_activity = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/MainActivity.java")
     view_model = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/GeocodeViewModel.java")
@@ -473,6 +522,18 @@ def check_coordinate_input_guard():
     validator_test = read_text("app/src/test/java/com/sample/foo/tsgeocodeapp/GeocodeInputValidatorTest.java")
     view_model_test = read_text("app/src/test/java/com/sample/foo/tsgeocodeapp/GeocodeViewModelTest.java")
     strings = read_text("app/src/main/res/values/strings.xml")
+
+    check_service_coordinate_payload_text(service)
+    for relative_path, contract in {
+        "README.md": "require both coordinate extras",
+        "SECURITY.md": "require both coordinate extras",
+        "VISION.md": "Require both coordinate extras",
+        "CHANGES.md": "latitude or longitude extras",
+    }.items():
+        require(
+            contract in read_text(relative_path),
+            f"{relative_path} must document incomplete coordinate payload rejection",
+        )
 
     require(
         not (ROOT / "app/src/main/java/com/sample/foo/tsgeocodeapp/MainActivityWithAsyncTask.java").exists(),
