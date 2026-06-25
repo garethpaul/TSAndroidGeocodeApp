@@ -44,6 +44,12 @@ callback coordinates before updating retained UI state.
 - `make check` — static checks and dependency resolution passed, then Gradle
   stopped before JVM tests because the local checkout has no configured
   Android SDK; the hosted pull-request job supplies the required SDK.
+- Pull request #25 — Android unit tests, lint, debug assembly, Python 3.10 and
+  3.12 static contracts, and CodeQL analysis for Actions, Java/Kotlin, and
+  Python all passed.
+- Codex review helper against `origin/master` — parallel `make static` passed,
+  but the nested Codex CLI stopped before analysis with HTTP 401 because no
+  local Codex identity is authenticated.
 
 ### Bugs / findings
 
@@ -53,12 +59,13 @@ callback coordinates before updating retained UI state.
 
 ### Blockers
 
-- Full Android unit, lint, and APK validation depends on hosted pull-request CI.
+- The required Codex review cannot complete until the nested Codex CLI is
+  authenticated; do not merge before a clean review.
 
 ### Next action
 
-- Run `make static`, open a focused pull request, require hosted `make check`
-  and Codex review, then merge only if both are clean.
+- Authenticate the nested Codex CLI, rerun branch review against `master`, and
+  merge pull request #25 only if that review is clean.
 
 ## 2026-06-25 - P2 - Reject incomplete direct coordinate requests
 

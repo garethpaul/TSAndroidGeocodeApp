@@ -122,3 +122,8 @@ git commit -m "fix: validate geocode result coordinates"
 - `make check` passed static checks and dependency resolution, then stopped
   before JVM tests because this local environment has no Android SDK
   configured. The hosted pull-request job remains the complete gate.
+- Pull request #25 passed the hosted Android gate, both Python static-contract
+  jobs, and all CodeQL analyses.
+- The Codex review helper's parallel `make static` command passed, but the
+  nested Codex CLI returned HTTP 401 before review analysis because it is not
+  authenticated locally.
