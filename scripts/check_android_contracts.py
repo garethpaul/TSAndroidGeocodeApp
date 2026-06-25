@@ -514,6 +514,56 @@ def check_service_coordinate_payload_text(service):
     )
 
 
+def check_result_coordinate_guard_text(view_model):
+    result_handler = re.search(
+        r"private void handleGeocodeResult\(int resultCode, Bundle resultData\) \{"
+        r"(?P<body>.*?)\n    \}",
+        view_model,
+        re.DOTALL,
+    )
+    require(result_handler is not None, "Geocode result handler must remain present")
+    handler_body = result_handler.group("body")
+    presence_guard = re.search(
+        r"address == null\s*\|\|\s*!address\.hasLatitude\(\)"
+        r"\s*\|\|\s*!address\.hasLongitude\(\)\) \{"
+        r"(?P<body>.*?)\n\s*\}",
+        handler_body,
+        re.DOTALL,
+    )
+    latitude_read = handler_body.find("address.getLatitude()")
+    longitude_read = handler_body.find("address.getLongitude()")
+    require(
+        presence_guard is not None,
+        "successful geocode results must require assigned latitude and longitude",
+    )
+    require(
+        "completeResult(resultCode, null, null, resultMessage);"
+        in presence_guard.group("body")
+        and "return;" in presence_guard.group("body"),
+        "missing Address coordinates must settle with the safe fallback before returning",
+    )
+    require(
+        latitude_read >= 0
+        and longitude_read >= 0
+        and presence_guard.start() < latitude_read
+        and presence_guard.start() < longitude_read,
+        "Address coordinate presence must be checked before either throwing getter",
+    )
+
+    completion = re.search(
+        r"void completeResult\(int resultCode, Double latitude, Double longitude, String message\) \{"
+        r"(?P<body>.*?)\n    \}",
+        view_model,
+        re.DOTALL,
+    )
+    require(completion is not None, "Geocode result completion must remain present")
+    require(
+        "GeocodeInputValidator.isCoordinateInRange(latitude, longitude)"
+        in completion.group("body"),
+        "successful geocode results must reject non-finite and out-of-range coordinates",
+    )
+
+
 def check_coordinate_input_guard():
     main_activity = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/MainActivity.java")
     view_model = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/GeocodeViewModel.java")
@@ -524,6 +574,17 @@ def check_coordinate_input_guard():
     strings = read_text("app/src/main/res/values/strings.xml")
 
     check_service_coordinate_payload_text(service)
+    check_result_coordinate_guard_text(view_model)
+    for relative_path, contract in {
+        "README.md": "Successful geocoder callbacks require assigned",
+        "SECURITY.md": "Successful geocoder callbacks require assigned",
+        "VISION.md": "Require assigned, finite, in-range coordinates",
+        "CHANGES.md": "missing coordinate assignments",
+    }.items():
+        require(
+            contract in read_text(relative_path),
+            f"{relative_path} must document successful result coordinate validation",
+        )
     for relative_path, contract in {
         "README.md": "require both coordinate extras",
         "SECURITY.md": "require both coordinate extras",
@@ -721,7 +782,6 @@ def check_coordinate_input_guard():
         "if (resultData == null)",
         "String resultMessage = resultData.getString(Constants.RESULT_DATA_KEY);",
         "BundleCompat.getParcelable(",
-        "address == null ? null : address.getLatitude()",
         "completeResult(resultCode, null, null, resultMessage);",
         "private static final class AddressResultReceiver extends ResultReceiver",
         "private final WeakReference<GeocodeViewModel> viewModelReference;",

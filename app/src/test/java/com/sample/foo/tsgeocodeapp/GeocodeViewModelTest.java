@@ -90,6 +90,30 @@ public class GeocodeViewModelTest {
     }
 
     @Test
+    public void successWithInvalidCoordinatesUsesTheSafeFallback() {
+        double[][] invalidCoordinates = {
+                {Double.NaN, 0},
+                {0, Double.POSITIVE_INFINITY},
+                {-90.0001, 0},
+                {90.0001, 0},
+                {0, -180.0001},
+                {0, 180.0001}
+        };
+
+        for (double[] coordinates : invalidCoordinates) {
+            GeocodeViewModel viewModel = new GeocodeViewModel();
+            viewModel.beginRequest();
+
+            viewModel.completeResult(Constants.SUCCESS_RESULT,
+                    coordinates[0], coordinates[1], "Address text");
+
+            GeocodeViewModel.UiState state = viewModel.getCurrentState();
+            assertFalse(state.isRequestInFlight());
+            assertEquals(GeocodeViewModel.NO_GEOCODE_RESULT, state.getDisplayMessage());
+        }
+    }
+
+    @Test
     public void emptyFailureMessageUsesTheSafeFallback() {
         GeocodeViewModel viewModel = new GeocodeViewModel();
         viewModel.beginRequest();

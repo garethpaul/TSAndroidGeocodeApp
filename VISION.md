@@ -32,6 +32,7 @@ Priority:
 - Reject IntentService geocode requests that cannot receive a result
 - Keep ResultReceiver extraction typed across supported Android releases
 - Guard geocode result payloads before updating the primary activity UI
+- Require assigned, finite, in-range coordinates in successful geocode results
 - Keep retained geocode state free of Activity, View, and Context references
 - Deliver background results only through lifecycle-aware active observers
 - Keep geocode request mode aligned with radio state restored after recreation

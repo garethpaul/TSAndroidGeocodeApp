@@ -1,5 +1,65 @@
 # Changes
 
+## 2026-06-25 16:22 PDT - P2 - Validate successful geocode coordinates
+
+### Summary
+
+Prevented successful result callbacks with missing coordinate assignments from
+throwing in Android `Address` getters, and rejected non-finite or out-of-range
+callback coordinates before updating retained UI state.
+
+### Work completed
+
+- Checked `Address.hasLatitude()` and `Address.hasLongitude()` before calling
+  their throwing coordinate getters.
+- Reused the shared finite geographic coordinate validator at the ViewModel
+  result boundary.
+- Added JVM regression cases for malformed successful coordinates and
+  mutation-sensitive static contracts for missing, late, or incomplete guards.
+- Documented the callback response-integrity boundary and implementation plan.
+
+### Threads
+
+- None. Repository tracing and Android's official `Address` API contract
+  provided sufficient evidence for a direct focused repair.
+
+### Files changed
+
+- `app/src/main/java/com/sample/foo/tsgeocodeapp/GeocodeViewModel.java` — guarded
+  coordinate access and result acceptance.
+- `app/src/test/java/com/sample/foo/tsgeocodeapp/GeocodeViewModelTest.java` —
+  covered invalid successful callback coordinates.
+- `scripts/check_android_contracts.py` and
+  `tests/test_check_android_contracts.py` — enforced mutation-sensitive result
+  coordinate guards.
+- `README.md`, `SECURITY.md`, `VISION.md`, and
+  `docs/plans/2026-06-25-geocode-result-coordinate-validation.md` — documented
+  behavior, security posture, roadmap, and implementation evidence.
+
+### Validation
+
+- Focused result-coordinate contract — failed before implementation because no
+  `Address` presence guard existed, then passed after the repair.
+- `make static` — passed all 28 Python tests and eight repository contracts.
+- `make check` — static checks and dependency resolution passed, then Gradle
+  stopped before JVM tests because the local checkout has no configured
+  Android SDK; the hosted pull-request job supplies the required SDK.
+
+### Bugs / findings
+
+- Android documents that `Address.getLatitude()` and `getLongitude()` throw
+  when their values are unassigned; the retained result path called both
+  getters without checking the corresponding presence flags.
+
+### Blockers
+
+- Full Android unit, lint, and APK validation depends on hosted pull-request CI.
+
+### Next action
+
+- Run `make static`, open a focused pull request, require hosted `make check`
+  and Codex review, then merge only if both are clean.
+
 ## 2026-06-25 - P2 - Reject incomplete direct coordinate requests
 
 ### Summary
