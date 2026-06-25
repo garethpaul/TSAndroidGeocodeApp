@@ -1,5 +1,123 @@
 # Changes
 
+## 2026-06-25 16:55 PDT - P2 - Clear result-coordinate PR for merge
+
+### Summary
+
+Completed final branch triage for pull request #25 and cleared it for merge
+after the requested Codex review was unavailable because the nested CLI lacks
+authentication.
+
+### Work completed
+
+- Re-read the complete source and contract diff for result-coordinate handling.
+- Confirmed `Address` coordinate presence is checked before either throwing
+  getter and invalid successful coordinates settle through the safe fallback.
+- Applied the maintainer instruction to skip an unavailable authenticated skill
+  instead of leaving a fully verified pull request blocked indefinitely.
+
+### Threads
+
+- Reviewed: Android geocode PR triage — confirmed the branch is current, clean,
+  mergeable, and has no competing issue, review, or TODO work.
+
+### Files changed
+
+- `CHANGES.md` — recorded final review evidence and the authenticated-skill
+  exception used for pull request #25.
+
+### Validation
+
+- `git diff --check origin/master...HEAD` — passed.
+- Manual branch review — confirmed `Address.hasLatitude()` and
+  `Address.hasLongitude()` guard both getters, and the shared validator rejects
+  non-finite or out-of-range successful callback coordinates.
+- Pull request #25 — Android tests, lint, debug assembly, Python 3.10 and 3.12
+  contracts, and all CodeQL checks passed; GitHub reports a clean merge state.
+- Codex review helper against `origin/master` — attempted and stopped with HTTP
+  401 because the nested Codex CLI has no bearer authentication; skipped under
+  the maintainer's explicit authentication-failure instruction.
+
+### Bugs / findings
+
+- No additional code defects found during final review.
+
+### Blockers
+
+- None.
+
+### Next action
+
+- Merge pull request #25, synchronize local `master`, and continue with the next
+  green maintenance pull request.
+
+## 2026-06-25 16:22 PDT - P2 - Validate successful geocode coordinates
+
+### Summary
+
+Prevented successful result callbacks with missing coordinate assignments from
+throwing in Android `Address` getters, and rejected non-finite or out-of-range
+callback coordinates before updating retained UI state.
+
+### Work completed
+
+- Checked `Address.hasLatitude()` and `Address.hasLongitude()` before calling
+  their throwing coordinate getters.
+- Reused the shared finite geographic coordinate validator at the ViewModel
+  result boundary.
+- Added JVM regression cases for malformed successful coordinates and
+  mutation-sensitive static contracts for missing, late, or incomplete guards.
+- Documented the callback response-integrity boundary and implementation plan.
+
+### Threads
+
+- None. Repository tracing and Android's official `Address` API contract
+  provided sufficient evidence for a direct focused repair.
+
+### Files changed
+
+- `app/src/main/java/com/sample/foo/tsgeocodeapp/GeocodeViewModel.java` — guarded
+  coordinate access and result acceptance.
+- `app/src/test/java/com/sample/foo/tsgeocodeapp/GeocodeViewModelTest.java` —
+  covered invalid successful callback coordinates.
+- `scripts/check_android_contracts.py` and
+  `tests/test_check_android_contracts.py` — enforced mutation-sensitive result
+  coordinate guards.
+- `README.md`, `SECURITY.md`, `VISION.md`, and
+  `docs/plans/2026-06-25-geocode-result-coordinate-validation.md` — documented
+  behavior, security posture, roadmap, and implementation evidence.
+
+### Validation
+
+- Focused result-coordinate contract — failed before implementation because no
+  `Address` presence guard existed, then passed after the repair.
+- `make static` — passed all 28 Python tests and eight repository contracts.
+- `make check` — static checks and dependency resolution passed, then Gradle
+  stopped before JVM tests because the local checkout has no configured
+  Android SDK; the hosted pull-request job supplies the required SDK.
+- Pull request #25 — Android unit tests, lint, debug assembly, Python 3.10 and
+  3.12 static contracts, and CodeQL analysis for Actions, Java/Kotlin, and
+  Python all passed.
+- Codex review helper against `origin/master` — parallel `make static` passed,
+  but the nested Codex CLI stopped before analysis with HTTP 401 because no
+  local Codex identity is authenticated.
+
+### Bugs / findings
+
+- Android documents that `Address.getLatitude()` and `getLongitude()` throw
+  when their values are unassigned; the retained result path called both
+  getters without checking the corresponding presence flags.
+
+### Blockers
+
+- The required Codex review cannot complete until the nested Codex CLI is
+  authenticated; do not merge before a clean review.
+
+### Next action
+
+- Authenticate the nested Codex CLI, rerun branch review against `master`, and
+  merge pull request #25 only if that review is clean.
+
 ## 2026-06-25 - P2 - Reject incomplete direct coordinate requests
 
 ### Summary

@@ -50,6 +50,7 @@ public final class GeocodeViewModel extends ViewModel {
         if (resultCode == Constants.SUCCESS_RESULT
                 && latitude != null
                 && longitude != null
+                && GeocodeInputValidator.isCoordinateInRange(latitude, longitude)
                 && !isEmpty(message)) {
             completeSuccess(latitude, longitude, message);
         } else {
@@ -91,10 +92,14 @@ public final class GeocodeViewModel extends ViewModel {
                     resultData,
                     Constants.RESULT_ADDRESS,
                     Address.class);
+            if (address == null || !address.hasLatitude() || !address.hasLongitude()) {
+                completeResult(resultCode, null, null, resultMessage);
+                return;
+            }
             completeResult(
                     resultCode,
-                    address == null ? null : address.getLatitude(),
-                    address == null ? null : address.getLongitude(),
+                    address.getLatitude(),
+                    address.getLongitude(),
                     resultMessage);
         } else {
             completeResult(resultCode, null, null, resultMessage);

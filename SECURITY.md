@@ -32,6 +32,8 @@ Helpful reports include:
   location values.
 - Direct location-mode service requests must require both coordinate extras;
   missing payload fields must never inherit valid-looking zero defaults.
+- Successful geocoder callbacks require assigned, finite, in-range latitude and
+  longitude values before location data is rendered.
 - Android app-data backup should stay disabled by default for this sample.
 - Background result receivers are owned by lifecycle-retained screen state.
   The retained screen state never stores an Activity, View, or Context, and

@@ -49,9 +49,9 @@ network conditions.
 
 - `make static` validates source, manifest, resource, build, workflow, and
   maintenance-plan contracts.
-- `make test` runs fifteen JVM unit tests for address normalization, coordinate
+- `make test` runs sixteen JVM unit tests for address normalization, coordinate
   boundaries, and retained request/result state, including duplicate admission,
-  completion, fallback, and startup rollback.
+  completion, invalid callback rejection, fallback, and startup rollback.
 - `make build` assembles the debug APK.
 - `make lint` runs static contracts and Android lint with warnings treated as
   errors.
@@ -81,6 +81,8 @@ by checksum, and Dependabot groups weekly Gradle and Actions updates.
 - Service requests read the receiver through AndroidX's typed parcelable compat
   API across the supported API 21-36 range.
 - Missing or malformed result payloads do not crash UI rendering.
+- Successful geocoder callbacks require assigned, finite, in-range latitude and
+  longitude values before the result can update retained UI state.
 - Background results use a main-looper receiver owned by retained screen state.
   The receiver has no Activity reference, and lifecycle observation automatically
   detaches destroyed Activity instances.

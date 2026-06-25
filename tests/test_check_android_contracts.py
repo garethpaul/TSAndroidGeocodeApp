@@ -587,6 +587,89 @@ class ServiceCoordinatePayloadContractsTest(unittest.TestCase):
                 contracts.check_service_coordinate_payload_text(service)
 
 
+class GeocodeResultCoordinateContractTest(unittest.TestCase):
+    def test_requires_presence_and_range_guards(self):
+        view_model = contracts.read_text(
+            "app/src/main/java/com/sample/foo/tsgeocodeapp/GeocodeViewModel.java"
+        )
+
+        contracts.check_result_coordinate_guard_text(view_model)
+
+    def test_rejects_guard_mutations(self):
+        guarded_view_model = """void completeResult(int resultCode, Double latitude, Double longitude, String message) {
+        if (resultCode == Constants.SUCCESS_RESULT
+                && latitude != null
+                && longitude != null
+                && GeocodeInputValidator.isCoordinateInRange(latitude, longitude)
+                && !isEmpty(message)) {
+            completeSuccess(latitude, longitude, message);
+        }
+    }
+
+    private void handleGeocodeResult(int resultCode, Bundle resultData) {
+        Address address = BundleCompat.getParcelable(
+                resultData,
+                Constants.RESULT_ADDRESS,
+                Address.class);
+        if (address == null || !address.hasLatitude() || !address.hasLongitude()) {
+            completeResult(resultCode, null, null, resultMessage);
+            return;
+        }
+        completeResult(
+                resultCode,
+                address.getLatitude(),
+                address.getLongitude(),
+                resultMessage);
+    }
+"""
+        contracts.check_result_coordinate_guard_text(guarded_view_model)
+
+        mutations = {
+            "missing latitude presence": guarded_view_model.replace(
+                " || !address.hasLatitude()", "", 1
+            ),
+            "missing longitude presence": guarded_view_model.replace(
+                " || !address.hasLongitude()", "", 1
+            ),
+            "missing safe fallback": guarded_view_model.replace(
+                "            completeResult(resultCode, null, null, resultMessage);\n",
+                "",
+                1,
+            ),
+            "missing early return": guarded_view_model.replace(
+                "            return;\n",
+                "",
+                1,
+            ),
+            "guard after getter": guarded_view_model.replace(
+                "        if (address == null || !address.hasLatitude() || !address.hasLongitude()) {\n"
+                "            completeResult(resultCode, null, null, resultMessage);\n"
+                "            return;\n"
+                "        }\n"
+                "        completeResult(\n"
+                "                resultCode,\n"
+                "                address.getLatitude(),\n"
+                "                address.getLongitude(),\n"
+                "                resultMessage);",
+                "        double latitude = address.getLatitude();\n"
+                "        if (address == null || !address.hasLatitude() || !address.hasLongitude()) {\n"
+                "            completeResult(resultCode, null, null, resultMessage);\n"
+                "            return;\n"
+                "        }\n"
+                "        completeResult(resultCode, latitude, address.getLongitude(), resultMessage);",
+                1,
+            ),
+            "missing range validation": guarded_view_model.replace(
+                "                && GeocodeInputValidator.isCoordinateInRange(latitude, longitude)\n",
+                "",
+                1,
+            ),
+        }
+        for name, view_model in mutations.items():
+            with self.subTest(name=name), self.assertRaises(AssertionError):
+                contracts.check_result_coordinate_guard_text(view_model)
+
+
 class StaticVerificationEntryPointTest(unittest.TestCase):
     def test_make_static_runs_from_outside_repository(self):
         if os.environ.get("ANDROID_CONTRACT_EXTERNAL_MAKE_TEST") == "1":
