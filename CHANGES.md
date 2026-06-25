@@ -6,15 +6,15 @@
 
 Confirmed that Dependabot PR #22 proposed Kotlin 2.4.0 against AGP 8.10.1,
 which violates the repository's reviewed compatibility matrix, then encoded
-that boundary in the canonical update policy.
+the full Kotlin 2.3+ incompatibility boundary in the canonical update policy.
 
 ### Work completed
 
-- Ignored `org.jetbrains.kotlin:kotlin-bom` versions `[2.4.0,)` until the AGP
-  9.1 migration.
+- Ignored `org.jetbrains.kotlin:kotlin-bom` versions `[2.3.0,)` until the AGP
+  8.13.2 migration.
 - Preserved compatible Kotlin 2.2 patch updates.
-- Added mutation-sensitive coverage for missing, overbroad, and exact-version
-  Kotlin ignore policies.
+- Added mutation-sensitive coverage for missing, overbroad, and 2.4-only Kotlin
+  ignore policies.
 
 ### Threads
 
@@ -33,23 +33,25 @@ that boundary in the canonical update policy.
 ### Validation
 
 - Focused Dependabot contract test — failed before the canonical policy update.
+- Codex-review regression test — failed after tightening the expected boundary
+  from 2.4 to 2.3, proving the initial policy still allowed Kotlin 2.3.
 - `python3 -m unittest tests.test_check_android_contracts.CheckDependabotContractsTest -v` — passed.
 - `make static` — passed all static contract tests.
 
 ### Bugs / findings
 
-- Dependabot grouping allowed a Kotlin minor update that requires AGP 9.1.0,
-  while the repository intentionally remains on AGP 8.10.1.
+- The initial policy blocked Kotlin 2.4 but still allowed Kotlin 2.3, which
+  Android's compatibility table requires AGP 8.13.2 to process; the repository
+  intentionally remains on AGP 8.10.1.
 
 ### Blockers
 
-- The nested Codex CLI identity remains unauthenticated, so the required Codex
-  review gate cannot complete before merge.
+- None. The Codex API profile was reauthenticated through the supported stdin
+  login flow.
 
 ### Next action
 
-- Close incompatible PR #22, push this policy change to a new PR, and rerun
-  Codex review after authenticating the nested CLI.
+- Run the full repository gates, rerun Codex review, and merge PR #23 if clean.
 
 ## 2026-06-17
 

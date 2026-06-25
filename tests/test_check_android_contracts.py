@@ -175,10 +175,10 @@ updates:
       - dependency-name: "androidx.lifecycle:*"
         versions:
           - "[2.10.0,)"
-      # Kotlin 2.4+ requires AGP 9.1; remove after the AGP migration.
+      # Kotlin 2.3+ requires AGP 8.13.2; remove after the AGP migration.
       - dependency-name: "org.jetbrains.kotlin:kotlin-bom"
         versions:
-          - "[2.4.0,)"
+          - "[2.3.0,)"
     groups:
       android-dependencies:
         patterns:
@@ -561,18 +561,18 @@ class CheckDependabotContractsTest(unittest.TestCase):
         contracts.check_dependabot_contracts_text(VALID_DEPENDABOT)
 
         kotlin_ceiling = (
-            "      # Kotlin 2.4+ requires AGP 9.1; remove after the AGP migration.\n"
+            "      # Kotlin 2.3+ requires AGP 8.13.2; remove after the AGP migration.\n"
             "      - dependency-name: \"org.jetbrains.kotlin:kotlin-bom\"\n"
             "        versions:\n"
-            "          - \"[2.4.0,)\"\n"
+            "          - \"[2.3.0,)\"\n"
         )
         mutations = {
             "missing ceiling": VALID_DEPENDABOT.replace(kotlin_ceiling, "", 1),
             "compatible 2.2 updates ignored": VALID_DEPENDABOT.replace(
-                "[2.4.0,)", "[2.2.0,)", 1
+                "[2.3.0,)", "[2.2.0,)", 1
             ),
-            "only current incompatible release ignored": VALID_DEPENDABOT.replace(
-                "[2.4.0,)", "[2.4.0]", 1
+            "Kotlin 2.3 updates remain allowed": VALID_DEPENDABOT.replace(
+                "[2.3.0,)", "[2.4.0,)", 1
             ),
         }
 
