@@ -30,6 +30,8 @@ Helpful reports include:
 - User-entered coordinates and resolved street-address lines must remain out of
   Logcat; generic validation and service diagnostics may be logged without the
   location values.
+- Direct location-mode service requests must require both coordinate extras;
+  missing payload fields must never inherit valid-looking zero defaults.
 - Android app-data backup should stay disabled by default for this sample.
 - Background result receivers are owned by lifecycle-retained screen state.
   The retained screen state never stores an Activity, View, or Context, and

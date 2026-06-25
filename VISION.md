@@ -22,6 +22,8 @@ Priority:
 - Guard user-entered coordinates before invoking geocoder services
 - Reject out-of-range coordinates before invoking geocoder services, including
   direct IntentService requests
+- Require both coordinate extras on direct IntentService location requests so
+  missing payload fields cannot silently resolve as zero
 - Trim and validate address-name requests before invoking geocoder services
 - Keep background geocode work consuming validated request values
 - Reject activity and direct-service requests when no platform geocoder exists

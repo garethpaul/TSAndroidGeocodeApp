@@ -67,21 +67,29 @@ public class GeocodeAddressIntentService extends IntentService {
             }
         }
         else if(fetchType == Constants.USE_ADDRESS_LOCATION) {
-            double latitude = intent.getDoubleExtra(Constants.LOCATION_LATITUDE_DATA_EXTRA, 0);
-            double longitude = intent.getDoubleExtra(Constants.LOCATION_LONGITUDE_DATA_EXTRA, 0);
-
-            if(!isCoordinateInRange(latitude, longitude)) {
+            if(!intent.hasExtra(Constants.LOCATION_LATITUDE_DATA_EXTRA)
+                    || !intent.hasExtra(Constants.LOCATION_LONGITUDE_DATA_EXTRA)) {
                 errorMessage = "Invalid Latitude or Longitude Used";
                 Log.e(TAG, errorMessage);
             } else {
-                try {
-                    addresses = geocoder.getFromLocation(latitude, longitude, 1);
-                } catch (IOException ioException) {
-                    errorMessage = "Service Not Available";
-                    Log.e(TAG, errorMessage, ioException);
-                } catch (IllegalArgumentException illegalArgumentException) {
+                double latitude = intent.getDoubleExtra(
+                        Constants.LOCATION_LATITUDE_DATA_EXTRA, 0);
+                double longitude = intent.getDoubleExtra(
+                        Constants.LOCATION_LONGITUDE_DATA_EXTRA, 0);
+
+                if(!isCoordinateInRange(latitude, longitude)) {
                     errorMessage = "Invalid Latitude or Longitude Used";
-                    Log.e(TAG, errorMessage, illegalArgumentException);
+                    Log.e(TAG, errorMessage);
+                } else {
+                    try {
+                        addresses = geocoder.getFromLocation(latitude, longitude, 1);
+                    } catch (IOException ioException) {
+                        errorMessage = "Service Not Available";
+                        Log.e(TAG, errorMessage, ioException);
+                    } catch (IllegalArgumentException illegalArgumentException) {
+                        errorMessage = "Invalid Latitude or Longitude Used";
+                        Log.e(TAG, errorMessage, illegalArgumentException);
+                    }
                 }
             }
         }

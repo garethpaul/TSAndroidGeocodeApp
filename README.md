@@ -76,6 +76,8 @@ by checksum, and Dependabot groups weekly Gradle and Actions updates.
   Activity restores progress, action availability, and the latest safe result
   from lifecycle-aware screen state.
 - Direct service requests without a `ResultReceiver` are rejected.
+- Direct location-mode service requests require both coordinate extras before
+  either value is read, so omitted fields cannot silently geocode `(0, 0)`.
 - Service requests read the receiver through AndroidX's typed parcelable compat
   API across the supported API 21-36 range.
 - Missing or malformed result payloads do not crash UI rendering.

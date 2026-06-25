@@ -1,5 +1,27 @@
 # Changes
 
+## 2026-06-25 - P2 - Reject incomplete direct coordinate requests
+
+### Summary
+
+Prevented direct location-mode `IntentService` requests from treating missing
+latitude or longitude extras as the valid default value zero and geocoding an
+unintended location.
+
+### Work completed
+
+- Required both coordinate extras before either value is read.
+- Preserved the existing finite/range checks and generic privacy-safe failure
+  diagnostics.
+- Added mutation-sensitive contracts for missing latitude, missing longitude,
+  and presence checks moved after coordinate reads.
+
+### Validation
+
+- Focused coordinate payload contract — failed before the service guard and
+  passed after the paired presence check was added.
+- `make static` and `make check` provide the repository closeout gates.
+
 ## 2026-06-24 23:15 PDT - P2 - Block incompatible Kotlin Dependabot updates
 
 ### Summary

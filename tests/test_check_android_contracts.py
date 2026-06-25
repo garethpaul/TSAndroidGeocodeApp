@@ -535,6 +535,58 @@ class RunAndroidVerificationTest(unittest.TestCase):
         self.assertEqual(result.returncode, 7)
 
 
+class ServiceCoordinatePayloadContractsTest(unittest.TestCase):
+    SERVICE = """else if(fetchType == Constants.USE_ADDRESS_LOCATION) {
+        if(!intent.hasExtra(Constants.LOCATION_LATITUDE_DATA_EXTRA)
+                || !intent.hasExtra(Constants.LOCATION_LONGITUDE_DATA_EXTRA)) {
+            errorMessage = \"Invalid Latitude or Longitude Used\";
+        } else {
+            double latitude = intent.getDoubleExtra(Constants.LOCATION_LATITUDE_DATA_EXTRA, 0);
+            double longitude = intent.getDoubleExtra(Constants.LOCATION_LONGITUDE_DATA_EXTRA, 0);
+            addresses = geocoder.getFromLocation(latitude, longitude, 1);
+        }
+        }
+        else {
+        errorMessage = "Unknown Type";
+        }
+"""
+
+    def test_requires_paired_coordinate_extra_guard_before_reads(self):
+        contracts.check_service_coordinate_payload_text(self.SERVICE)
+
+        mutations = {
+            "missing latitude presence": self.SERVICE.replace(
+                "!intent.hasExtra(Constants.LOCATION_LATITUDE_DATA_EXTRA)\n"
+                "                || ",
+                "",
+                1,
+            ),
+            "missing longitude presence": self.SERVICE.replace(
+                "\n                || !intent.hasExtra(Constants.LOCATION_LONGITUDE_DATA_EXTRA)",
+                "",
+                1,
+            ),
+            "guard after coordinate reads": self.SERVICE.replace(
+                "        if(!intent.hasExtra(Constants.LOCATION_LATITUDE_DATA_EXTRA)\n"
+                "                || !intent.hasExtra(Constants.LOCATION_LONGITUDE_DATA_EXTRA)) {\n"
+                "            errorMessage = \"Invalid Latitude or Longitude Used\";\n"
+                "        } else {\n"
+                "            double latitude = intent.getDoubleExtra(Constants.LOCATION_LATITUDE_DATA_EXTRA, 0);\n"
+                "            double longitude = intent.getDoubleExtra(Constants.LOCATION_LONGITUDE_DATA_EXTRA, 0);\n",
+                "        double latitude = intent.getDoubleExtra(Constants.LOCATION_LATITUDE_DATA_EXTRA, 0);\n"
+                "        double longitude = intent.getDoubleExtra(Constants.LOCATION_LONGITUDE_DATA_EXTRA, 0);\n"
+                "        if(!intent.hasExtra(Constants.LOCATION_LATITUDE_DATA_EXTRA)\n"
+                "                || !intent.hasExtra(Constants.LOCATION_LONGITUDE_DATA_EXTRA)) {\n"
+                "            errorMessage = \"Invalid Latitude or Longitude Used\";\n"
+                "        } else {\n",
+                1,
+            ),
+        }
+        for name, service in mutations.items():
+            with self.subTest(name=name), self.assertRaises(AssertionError):
+                contracts.check_service_coordinate_payload_text(service)
+
+
 class StaticVerificationEntryPointTest(unittest.TestCase):
     def test_make_static_runs_from_outside_repository(self):
         if os.environ.get("ANDROID_CONTRACT_EXTERNAL_MAKE_TEST") == "1":
