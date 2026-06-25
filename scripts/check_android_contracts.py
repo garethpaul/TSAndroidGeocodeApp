@@ -255,6 +255,10 @@ updates:
       - dependency-name: "androidx.lifecycle:*"
         versions:
           - "[2.10.0,)"
+      # Kotlin 2.4+ requires AGP 9.1; remove after the AGP migration.
+      - dependency-name: "org.jetbrains.kotlin:kotlin-bom"
+        versions:
+          - "[2.4.0,)"
     groups:
       android-dependencies:
         patterns:

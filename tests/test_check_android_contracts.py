@@ -175,6 +175,10 @@ updates:
       - dependency-name: "androidx.lifecycle:*"
         versions:
           - "[2.10.0,)"
+      # Kotlin 2.4+ requires AGP 9.1; remove after the AGP migration.
+      - dependency-name: "org.jetbrains.kotlin:kotlin-bom"
+        versions:
+          - "[2.4.0,)"
     groups:
       android-dependencies:
         patterns:
@@ -553,6 +557,29 @@ class StaticVerificationEntryPointTest(unittest.TestCase):
 
 
 class CheckDependabotContractsTest(unittest.TestCase):
+    def test_requires_kotlin_agp_compatibility_ceiling(self):
+        contracts.check_dependabot_contracts_text(VALID_DEPENDABOT)
+
+        kotlin_ceiling = (
+            "      # Kotlin 2.4+ requires AGP 9.1; remove after the AGP migration.\n"
+            "      - dependency-name: \"org.jetbrains.kotlin:kotlin-bom\"\n"
+            "        versions:\n"
+            "          - \"[2.4.0,)\"\n"
+        )
+        mutations = {
+            "missing ceiling": VALID_DEPENDABOT.replace(kotlin_ceiling, "", 1),
+            "compatible 2.2 updates ignored": VALID_DEPENDABOT.replace(
+                "[2.4.0,)", "[2.2.0,)", 1
+            ),
+            "only current incompatible release ignored": VALID_DEPENDABOT.replace(
+                "[2.4.0,)", "[2.4.0]", 1
+            ),
+        }
+
+        for name, dependabot in mutations.items():
+            with self.subTest(name=name), self.assertRaises(AssertionError):
+                contracts.check_dependabot_contracts_text(dependabot)
+
     def test_requires_api_21_lifecycle_version_ceiling(self):
         contracts.check_dependabot_contracts_text(VALID_DEPENDABOT)
 

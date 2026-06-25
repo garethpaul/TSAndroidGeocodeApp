@@ -1,5 +1,56 @@
 # Changes
 
+## 2026-06-24 23:15 PDT - P2 - Block incompatible Kotlin Dependabot updates
+
+### Summary
+
+Confirmed that Dependabot PR #22 proposed Kotlin 2.4.0 against AGP 8.10.1,
+which violates the repository's reviewed compatibility matrix, then encoded
+that boundary in the canonical update policy.
+
+### Work completed
+
+- Ignored `org.jetbrains.kotlin:kotlin-bom` versions `[2.4.0,)` until the AGP
+  9.1 migration.
+- Preserved compatible Kotlin 2.2 patch updates.
+- Added mutation-sensitive coverage for missing, overbroad, and exact-version
+  Kotlin ignore policies.
+
+### Threads
+
+- None. The existing compatibility matrix, failing PR logs, and canonical
+  Dependabot contract provided sufficient evidence for a direct TDD change.
+
+### Files changed
+
+- `.github/dependabot.yml` — added the Kotlin compatibility ignore range.
+- `scripts/check_android_contracts.py` — updated the canonical Dependabot
+  policy.
+- `tests/test_check_android_contracts.py` — enforced the exact Kotlin boundary.
+- `docs/plans/2026-06-24-kotlin-dependabot-compatibility.md` — recorded the
+  implementation and validation plan.
+
+### Validation
+
+- Focused Dependabot contract test — failed before the canonical policy update.
+- `python3 -m unittest tests.test_check_android_contracts.CheckDependabotContractsTest -v` — passed.
+- `make static` — passed all static contract tests.
+
+### Bugs / findings
+
+- Dependabot grouping allowed a Kotlin minor update that requires AGP 9.1.0,
+  while the repository intentionally remains on AGP 8.10.1.
+
+### Blockers
+
+- The nested Codex CLI identity remains unauthenticated, so the required Codex
+  review gate cannot complete before merge.
+
+### Next action
+
+- Close incompatible PR #22, push this policy change to a new PR, and rerun
+  Codex review after authenticating the nested CLI.
+
 ## 2026-06-17
 
 - Retained one in-flight geocode request and its latest safe result across
