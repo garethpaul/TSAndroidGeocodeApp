@@ -1,5 +1,58 @@
 # Changes
 
+## 2026-06-24 23:15 PDT - P2 - Block incompatible Kotlin Dependabot updates
+
+### Summary
+
+Confirmed that Dependabot PR #22 proposed Kotlin 2.4.0 against AGP 8.10.1,
+which violates the repository's reviewed compatibility matrix, then encoded
+the full Kotlin 2.3+ incompatibility boundary in the canonical update policy.
+
+### Work completed
+
+- Ignored `org.jetbrains.kotlin:kotlin-bom` versions `[2.3.0,)` until the AGP
+  8.13.2 migration.
+- Preserved compatible Kotlin 2.2 patch updates.
+- Added mutation-sensitive coverage for missing, overbroad, and 2.4-only Kotlin
+  ignore policies.
+
+### Threads
+
+- None. The existing compatibility matrix, failing PR logs, and canonical
+  Dependabot contract provided sufficient evidence for a direct TDD change.
+
+### Files changed
+
+- `.github/dependabot.yml` — added the Kotlin compatibility ignore range.
+- `scripts/check_android_contracts.py` — updated the canonical Dependabot
+  policy.
+- `tests/test_check_android_contracts.py` — enforced the exact Kotlin boundary.
+- `docs/plans/2026-06-24-kotlin-dependabot-compatibility.md` — recorded the
+  implementation and validation plan.
+
+### Validation
+
+- Focused Dependabot contract test — failed before the canonical policy update.
+- Codex-review regression test — failed after tightening the expected boundary
+  from 2.4 to 2.3, proving the initial policy still allowed Kotlin 2.3.
+- `python3 -m unittest tests.test_check_android_contracts.CheckDependabotContractsTest -v` — passed.
+- `make static` — passed all static contract tests.
+
+### Bugs / findings
+
+- The initial policy blocked Kotlin 2.4 but still allowed Kotlin 2.3, which
+  Android's compatibility table requires AGP 8.13.2 to process; the repository
+  intentionally remains on AGP 8.10.1.
+
+### Blockers
+
+- None. The Codex API profile was reauthenticated through the supported stdin
+  login flow.
+
+### Next action
+
+- Run the full repository gates, rerun Codex review, and merge PR #23 if clean.
+
 ## 2026-06-17
 
 - Retained one in-flight geocode request and its latest safe result across
