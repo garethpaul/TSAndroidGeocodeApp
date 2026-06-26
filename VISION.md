@@ -37,6 +37,7 @@ Priority:
 - Deliver background results only through lifecycle-aware active observers
 - Keep geocode request mode aligned with radio state restored after recreation
 - Include the final Android address line when rendering geocode results
+- Normalize sparse geocoder address lines before rendering or success delivery
 - Keep user-entered and resolved location data out of Logcat
 - Keep Android app-data backup disabled by default
 - Retain API 21 and Lifecycle 2.9.4 until a dedicated, tested lifecycle migration

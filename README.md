@@ -49,7 +49,7 @@ network conditions.
 
 - `make static` validates source, manifest, resource, build, workflow, and
   maintenance-plan contracts.
-- `make test` runs sixteen JVM unit tests for address normalization, coordinate
+- `make test` runs eighteen JVM unit tests for address normalization, coordinate
   boundaries, and retained request/result state, including duplicate admission,
   completion, invalid callback rejection, fallback, and startup rollback.
 - `make build` assembles the debug APK.
@@ -88,7 +88,8 @@ by checksum, and Dependabot groups weekly Gradle and Actions updates.
   detaches destroyed Activity instances.
 - Fetch requests derive their mode from the checked radio button, keeping
   restored UI state aligned with the request after Activity recreation.
-- Every address line reported by Android is included in the rendered result.
+- Sparse address results skip missing or blank lines, trim usable lines, and
+  fail safely when no displayable address text remains.
 - User-entered coordinates and resolved address lines are not copied into
   Logcat; the service retains generic failure diagnostics only. See
   `docs/plans/2026-06-12-geocode-log-privacy.md`.

@@ -4,6 +4,8 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
+import java.util.Arrays;
+
 import org.junit.Test;
 
 public class GeocodeInputValidatorTest {
@@ -38,5 +40,24 @@ public class GeocodeInputValidatorTest {
         assertFalse(GeocodeInputValidator.isCoordinateInRange(0, Double.NaN));
         assertFalse(GeocodeInputValidator.isCoordinateInRange(Double.POSITIVE_INFINITY, 0));
         assertFalse(GeocodeInputValidator.isCoordinateInRange(0, Double.NEGATIVE_INFINITY));
+    }
+
+    @Test
+    public void formatAddressLinesSkipsMissingAndBlankEntries() {
+        assertEquals(
+                "1600 Amphitheatre Parkway\nMountain View, CA",
+                GeocodeInputValidator.formatAddressLines(
+                        Arrays.asList(
+                                " 1600 Amphitheatre Parkway ",
+                                null,
+                                "   ",
+                                "Mountain View, CA"),
+                        "\n"));
+    }
+
+    @Test
+    public void formatAddressLinesRejectsMissingUsableEntries() {
+        assertEquals("", GeocodeInputValidator.formatAddressLines(
+                Arrays.asList(null, "", "   "), "\n"));
     }
 }
