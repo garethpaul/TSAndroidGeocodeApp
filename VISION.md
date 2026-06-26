@@ -39,6 +39,7 @@ Priority:
 - Include the final Android address line when rendering geocode results
 - Keep user-entered and resolved location data out of Logcat
 - Keep Android app-data backup disabled by default
+- Retain API 21 and Lifecycle 2.9.4 until a dedicated, tested lifecycle migration
 - Keep activity source aligned with declared layout widget ids
 - Keep completed maintenance plans under `docs/plans`
 
@@ -46,8 +47,6 @@ Next priorities:
 
 - Replace deprecated `IntentService` and synchronous geocoder calls if the
   sample receives further lifecycle-focused development
-- Decide whether to raise the API floor from 21 to 23 before adopting AndroidX
-  Lifecycle 2.10 or newer
 - Add emulator coverage for the activity/service result flow
 - Verify behavior against multiple platform geocoder implementations
 

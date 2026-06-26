@@ -98,6 +98,11 @@ by checksum, and Dependabot groups weekly Gradle and Actions updates.
 
 - Android's `IntentService` and synchronous `Geocoder` APIs used by this
   historical sample are deprecated on newer Android releases.
+- Retain the API 21 minimum and AndroidX Lifecycle 2.9.4 for the current sample.
+  Lifecycle 2.10.0 raised its minimum from API 21 to API 23, so accepting that
+  dependency line would silently drop API 21 and 22. Reconsider API 23 only in
+  a dedicated IntentService and geocoder migration with emulator coverage for
+  the activity/service result flow.
 - Unit tests cover pure input validation and retained request/result transitions;
   live geocoder behavior and rendered rotation flow still require device or
   emulator verification.
@@ -118,6 +123,8 @@ by checksum, and Dependabot groups weekly Gradle and Actions updates.
   anchored Make verification under hostile root assignments.
 - `docs/plans/2026-06-17-activity-recreation-result-state.md` records retained
   request/result ownership and its process-death boundary.
+- `docs/plans/2026-06-25-api-21-lifecycle-decision.md` records why Lifecycle
+  remains on 2.9.4 while the sample retains API 21.
 - `CHANGES.md`, `SECURITY.md`, and `VISION.md` describe maintenance history,
   disclosure guidance, and project scope.
 

@@ -1,5 +1,55 @@
 # Changes
 
+## 2026-06-25 21:17 PDT - P3 - Decide the Android lifecycle API floor
+
+### Summary
+
+Retained API 21 and AndroidX Lifecycle 2.9.4 until lifecycle modernization can
+be delivered as a dedicated, emulator-tested compatibility change.
+
+### Work completed
+
+- Confirmed the current build deliberately supports API 21 and pins both
+  Lifecycle artifacts to 2.9.4.
+- Confirmed official AndroidX Lifecycle 2.10.0 release notes raise the minimum
+  SDK from API 21 to API 23.
+- Replaced the open roadmap decision with an explicit no-silent-device-drop
+  policy and linked the completed decision plan.
+- Added a static documentation contract preserving the decision.
+
+### Threads
+
+- None; repository metadata and official AndroidX release notes were sufficient.
+
+### Files changed
+
+- `README.md` and `VISION.md` — document the platform-floor decision.
+- `scripts/check_android_contracts.py` — enforce the decision and completed plan.
+- `docs/plans/2026-06-25-api-21-lifecycle-decision.md` — record rationale and evidence.
+
+### Validation
+
+- The new contract failed on the missing decision plan before documentation was
+  added. `make static` then passed 28 checker tests and all eight repository
+  contracts, and three hostile documentation mutations were rejected.
+- Local `make check` passed dependency resolution but stopped at the Gradle
+  test/build phase because this host has no Android SDK; hosted SDK 36 remains
+  the required full gate.
+
+### Bugs / findings
+
+- P3 compatibility: adopting Lifecycle 2.10+ without an explicit migration
+  would silently remove API 21 and 22 support.
+
+### Blockers
+
+- Emulator lifecycle coverage remains required before raising the floor or
+  replacing the deprecated service/geocoder flow.
+
+### Next action
+
+- Run hosted SDK 36 verification, then merge if the exact head is clean.
+
 ## 2026-06-25 16:55 PDT - P2 - Clear result-coordinate PR for merge
 
 ### Summary
