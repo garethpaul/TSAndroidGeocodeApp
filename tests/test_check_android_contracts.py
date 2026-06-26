@@ -670,6 +670,60 @@ class GeocodeResultCoordinateContractTest(unittest.TestCase):
                 contracts.check_result_coordinate_guard_text(view_model)
 
 
+class AddressLineFormattingContractTest(unittest.TestCase):
+    SERVICE = """String outputAddress = GeocodeInputValidator.formatAddressLines(
+            addressFragments, System.getProperty("line.separator"));
+    if (TextUtils.isEmpty(outputAddress)) {
+        errorMessage = "Not Found";
+        deliverResultToReceiver(Constants.FAILURE_RESULT, errorMessage, null);
+    } else {
+        deliverResultToReceiver(Constants.SUCCESS_RESULT, outputAddress, address);
+    }
+"""
+    VALIDATOR = """static String formatAddressLines(List<String> addressLines, String separator) {
+    String normalizedLine = normalizeAddress(addressLine);
+    if (normalizedLine.isEmpty()) {
+        continue;
+    }
+    formattedAddress.append(delimiter);
+    formattedAddress.append(normalizedLine);
+}
+"""
+    TESTS = """formatAddressLinesSkipsMissingAndBlankEntries
+formatAddressLinesRejectsMissingUsableEntries
+"""
+
+    def test_requires_sparse_line_filtering_before_success(self):
+        contracts.check_address_line_formatting_text(
+            self.SERVICE, self.VALIDATOR, self.TESTS
+        )
+
+        mutations = {
+            "missing formatter": (self.SERVICE.replace(
+                "GeocodeInputValidator.formatAddressLines", "TextUtils.join", 1
+            ), self.VALIDATOR, self.TESTS),
+            "missing blank filter": (self.SERVICE, self.VALIDATOR.replace(
+                "if (normalizedLine.isEmpty())", "if (false)", 1
+            ), self.TESTS),
+            "success before guard": (self.SERVICE.replace(
+                "if (TextUtils.isEmpty(outputAddress)) {",
+                "deliverResultToReceiver(Constants.SUCCESS_RESULT, outputAddress, address);\n"
+                "    if (TextUtils.isEmpty(outputAddress)) {",
+                1,
+            ), self.VALIDATOR, self.TESTS),
+            "missing failure delivery": (self.SERVICE.replace(
+                "deliverResultToReceiver(Constants.FAILURE_RESULT, errorMessage, null);",
+                "return;",
+                1,
+            ), self.VALIDATOR, self.TESTS),
+            "missing sparse regression": (self.SERVICE, self.VALIDATOR,
+                self.TESTS.replace("formatAddressLinesSkipsMissingAndBlankEntries", "")),
+        }
+        for name, (service, validator, tests) in mutations.items():
+            with self.subTest(name=name), self.assertRaises(AssertionError):
+                contracts.check_address_line_formatting_text(service, validator, tests)
+
+
 class StaticVerificationEntryPointTest(unittest.TestCase):
     def test_make_static_runs_from_outside_repository(self):
         if os.environ.get("ANDROID_CONTRACT_EXTERNAL_MAKE_TEST") == "1":

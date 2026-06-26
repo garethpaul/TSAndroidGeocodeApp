@@ -111,10 +111,16 @@ public class GeocodeAddressIntentService extends IntentService {
             for(int i = 0; i <= address.getMaxAddressLineIndex(); i++) {
                 addressFragments.add(address.getAddressLine(i));
             }
-            Log.i(TAG, "Address Found");
-            deliverResultToReceiver(Constants.SUCCESS_RESULT,
-                    TextUtils.join(System.getProperty("line.separator"),
-                            addressFragments), address);
+            String outputAddress = GeocodeInputValidator.formatAddressLines(
+                    addressFragments, System.getProperty("line.separator"));
+            if (TextUtils.isEmpty(outputAddress)) {
+                errorMessage = "Not Found";
+                Log.e(TAG, errorMessage);
+                deliverResultToReceiver(Constants.FAILURE_RESULT, errorMessage, null);
+            } else {
+                Log.i(TAG, "Address Found");
+                deliverResultToReceiver(Constants.SUCCESS_RESULT, outputAddress, address);
+            }
         }
     }
 

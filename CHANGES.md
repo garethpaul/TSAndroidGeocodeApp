@@ -1,5 +1,65 @@
 # Changes
 
+## 2026-06-26 06:35 PDT - P1 - Normalize sparse address-line results
+
+### Summary
+
+Filtered null and blank platform address lines before rendering so sparse
+geocoder results cannot display literal `null` values or succeed without usable
+address text.
+
+### Work completed
+
+- Confirmed from Android's official `Address` API that individual address lines
+  may be null below the maximum reported index.
+- Added a pure-Java formatter that trims usable lines, skips null/blank entries,
+  preserves order, and joins with the supplied separator.
+- Made the service deliver `Not Found` as a failure when formatting removes
+  every line.
+- Added sparse and all-empty JVM regressions.
+- Added mutation-sensitive checker coverage, synchronized guidance, and a
+  completed plan.
+
+### Threads
+
+- None; service result handling, retained UI validation, official Android API
+  documentation, and current contracts were reviewed directly.
+
+### Files changed
+
+- `GeocodeInputValidator.java` — pure address-line formatter.
+- `GeocodeAddressIntentService.java` — filtered formatting and empty-result
+  failure.
+- `GeocodeInputValidatorTest.java` — sparse/all-empty regressions.
+- `scripts/check_android_contracts.py` and
+  `tests/test_check_android_contracts.py` — durable source/test contracts.
+- `README.md`, `SECURITY.md`, and `VISION.md` — public safety contract.
+- `docs/plans/2026-06-26-sparse-address-lines.md` — decision record.
+
+### Validation
+
+- RED direct `javac` probe — failed on the missing formatter.
+- GREEN direct `javac` probe — sparse and all-empty fixtures passed.
+- Twenty-nine portable checker tests and eight static contracts — passed.
+- Nine isolated hostile source, regression, guidance, and plan mutations — all
+  rejected.
+- `git diff --check` — passed.
+- Full Android SDK verification pending hosted CI; no local SDK is configured.
+
+### Bugs / findings
+
+- P1 correctness/privacy: sparse address-line results could expose literal
+  `null` placeholders or whitespace-only output to the retained UI.
+
+### Blockers
+
+- Local Gradle Android tests cannot resolve without `ANDROID_HOME`; hosted SDK
+  36 verification remains required before merge.
+
+### Next action
+
+- Complete exact-head review, hosted Android/CodeQL checks, and merge.
+
 ## 2026-06-25 21:17 PDT - P3 - Decide the Android lifecycle API floor
 
 ### Summary

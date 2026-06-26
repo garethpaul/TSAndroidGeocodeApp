@@ -1,5 +1,7 @@
 package com.sample.foo.tsgeocodeapp;
 
+import java.util.List;
+
 final class GeocodeInputValidator {
     private GeocodeInputValidator() {
     }
@@ -15,5 +17,25 @@ final class GeocodeInputValidator {
                 && latitude <= 90
                 && longitude >= -180
                 && longitude <= 180;
+    }
+
+    static String formatAddressLines(List<String> addressLines, String separator) {
+        if (addressLines == null) {
+            return "";
+        }
+
+        String delimiter = separator == null ? "" : separator;
+        StringBuilder formattedAddress = new StringBuilder();
+        for (String addressLine : addressLines) {
+            String normalizedLine = normalizeAddress(addressLine);
+            if (normalizedLine.isEmpty()) {
+                continue;
+            }
+            if (formattedAddress.length() > 0) {
+                formattedAddress.append(delimiter);
+            }
+            formattedAddress.append(normalizedLine);
+        }
+        return formattedAddress.toString();
     }
 }

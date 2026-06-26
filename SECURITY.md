@@ -34,6 +34,8 @@ Helpful reports include:
   missing payload fields must never inherit valid-looking zero defaults.
 - Successful geocoder callbacks require assigned, finite, in-range latitude and
   longitude values before location data is rendered.
+- Sparse geocoder address lines must be normalized before rendering; null and
+  blank entries are skipped, and an all-empty result fails safely.
 - Android app-data backup should stay disabled by default for this sample.
 - Background result receivers are owned by lifecycle-retained screen state.
   The retained screen state never stores an Activity, View, or Context, and

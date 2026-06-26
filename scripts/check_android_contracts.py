@@ -587,6 +587,45 @@ def check_result_coordinate_guard_text(view_model):
     )
 
 
+def check_address_line_formatting_text(service, validator, validator_test):
+    for contract in (
+        "static String formatAddressLines(List<String> addressLines, String separator)",
+        "String normalizedLine = normalizeAddress(addressLine);",
+        "if (normalizedLine.isEmpty())",
+        "formattedAddress.append(delimiter);",
+        "formattedAddress.append(normalizedLine);",
+    ):
+        require(contract in validator, f"address-line formatter is missing {contract!r}")
+
+    output_assignment = service.find(
+        "String outputAddress = GeocodeInputValidator.formatAddressLines("
+    )
+    empty_guard = service.find("if (TextUtils.isEmpty(outputAddress))")
+    success_delivery = service.find(
+        "deliverResultToReceiver(Constants.SUCCESS_RESULT, outputAddress, address);"
+    )
+    require(
+        output_assignment >= 0 and empty_guard >= 0 and success_delivery >= 0,
+        "IntentService must format and validate address lines before success delivery",
+    )
+    require(
+        output_assignment < empty_guard < success_delivery,
+        "IntentService must reject empty formatted addresses before success delivery",
+    )
+    empty_branch = service[empty_guard:success_delivery]
+    require(
+        'errorMessage = "Not Found";' in empty_branch
+        and "deliverResultToReceiver(Constants.FAILURE_RESULT, errorMessage, null);"
+        in empty_branch,
+        "IntentService must fail safely when no usable address lines remain",
+    )
+    for test_name in (
+        "formatAddressLinesSkipsMissingAndBlankEntries",
+        "formatAddressLinesRejectsMissingUsableEntries",
+    ):
+        require(test_name in validator_test, f"validator unit test is missing {test_name}")
+
+
 def check_coordinate_input_guard():
     main_activity = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/MainActivity.java")
     view_model = read_text("app/src/main/java/com/sample/foo/tsgeocodeapp/GeocodeViewModel.java")
@@ -598,6 +637,17 @@ def check_coordinate_input_guard():
 
     check_service_coordinate_payload_text(service)
     check_result_coordinate_guard_text(view_model)
+    check_address_line_formatting_text(service, validator, validator_test)
+    for relative_path, contract in {
+        "README.md": "Sparse address results skip missing or blank lines",
+        "SECURITY.md": "Sparse geocoder address lines must be normalized",
+        "VISION.md": "Normalize sparse geocoder address lines",
+        "CHANGES.md": "sparse address-line results",
+    }.items():
+        require(
+            contract in read_text(relative_path),
+            f"{relative_path} must document sparse address-line handling",
+        )
     for relative_path, contract in {
         "README.md": "Successful geocoder callbacks require assigned",
         "SECURITY.md": "Successful geocoder callbacks require assigned",
@@ -955,6 +1005,8 @@ def check_coordinate_input_guard():
         "coordinatesIncludeGeographicBoundaries",
         "coordinatesRejectValuesOutsideGeographicBoundaries",
         "coordinatesRejectNonFiniteValues",
+        "formatAddressLinesSkipsMissingAndBlankEntries",
+        "formatAddressLinesRejectsMissingUsableEntries",
     ):
         require(test_name in validator_test, f"validator unit test is missing {test_name}")
 
