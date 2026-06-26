@@ -24,6 +24,7 @@ GEOCODER_AVAILABILITY_PLAN = DOCS_PLANS / "2026-06-13-geocoder-availability.md"
 SINGLE_INFLIGHT_PLAN = DOCS_PLANS / "2026-06-13-single-inflight-geocode-request.md"
 ROOT_OVERRIDE_PLAN = DOCS_PLANS / "2026-06-14-make-root-override-protection.md"
 RECREATION_RESULT_PLAN = DOCS_PLANS / "2026-06-17-activity-recreation-result-state.md"
+API_FLOOR_DECISION_PLAN = DOCS_PLANS / "2026-06-25-api-21-lifecycle-decision.md"
 EXPECTED_AGP_VERSION = "8.10.1"
 EXPECTED_KOTLIN_BOM_VERSION = "2.2.21"
 EXPECTED_GRADLE_VERSION = "9.6.0"
@@ -349,6 +350,10 @@ def check_docs_plans():
         RECREATION_RESULT_PLAN.exists(),
         "docs/plans/2026-06-17-activity-recreation-result-state.md is missing",
     )
+    require(
+        API_FLOOR_DECISION_PLAN.exists(),
+        "docs/plans/2026-06-25-api-21-lifecycle-decision.md is missing",
+    )
 
     plans = sorted(DOCS_PLANS.glob("*.md")) if DOCS_PLANS.exists() else []
     require(plans, "docs/plans must contain at least one completed plan")
@@ -370,6 +375,24 @@ def check_docs_plans():
             contract in read_text(relative_path),
             f"{relative_path} must document recreation-safe result ownership",
         )
+
+    readme = read_text("README.md")
+    vision = read_text("VISION.md")
+    for contract in (
+        "Retain the API 21 minimum",
+        "AndroidX Lifecycle 2.9.4",
+        "Lifecycle 2.10.0 raised its minimum from API 21 to API 23",
+        "IntentService and geocoder migration",
+    ):
+        require(contract in readme, f"README.md must document the platform-floor decision: {contract}")
+    require(
+        "Decide whether to raise the API floor from 21 to 23" not in vision,
+        "VISION.md must not retain the completed API-floor decision as future work",
+    )
+    require(
+        "Retain API 21 and Lifecycle 2.9.4 until a dedicated, tested lifecycle migration" in vision,
+        "VISION.md must record the API-floor decision",
+    )
 
 
 def check_xml_resources():
